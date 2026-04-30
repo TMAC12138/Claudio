@@ -1,0 +1,17 @@
+{
+  "name": "claudio",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Personal AI DJ radio station",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.2.0",
+    "better-sqlite3": "^12.9.0",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.5"
+  }
+}
