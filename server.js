@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
+import fastifyStatic from '@fastify/static';
 import dotenv from 'dotenv';
 import { createReadStream, existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -26,6 +27,12 @@ tts.configure({ apiKey: process.env.FISH_API_KEY, voiceId: process.env.FISH_VOIC
 db.initDb();
 
 const app = Fastify({ logger: true });
+
+// Static file serving for PWA
+await app.register(fastifyStatic, {
+  root: join(__dirname, 'public'),
+  prefix: '/',
+});
 
 // CORS for PWA (M3)
 app.addHook('onRequest', (req, reply, done) => {
@@ -170,6 +177,21 @@ app.post('/api/stop', async (req, reply) => {
   } catch (err) {
     return reply.code(500).send({ error: err.message });
   }
+});
+
+// GET /api/prefs — get all preferences
+app.get('/api/prefs', async () => {
+  const d = db.getDb();
+  const rows = d.prepare('SELECT * FROM prefs').all();
+  return Object.fromEntries(rows.map(r => [r.key, r.value]));
+});
+
+// POST /api/prefs — update preference
+app.post('/api/prefs', async (req, reply) => {
+  const { key, value } = req.body || {};
+  if (!key) return reply.code(400).send({ error: 'key required' });
+  db.setPref(key, String(value));
+  return { ok: true };
 });
 
 // GET /api/scheduler — scheduler status
