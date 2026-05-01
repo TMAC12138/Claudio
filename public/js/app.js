@@ -1,0 +1,101 @@
+import * as api from './api.js';
+import * as player from './player.js';
+import * as chat from './chat.js';
+
+let currentView = 'player';
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${name}`)?.classList.add('active');
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.nav-btn[data-view="${name}"]`)?.classList.add('active');
+
+  currentView = name;
+}
+
+async function loadSettings() {
+  try {
+    const [scheduler, devices] = await Promise.all([
+      api.getScheduler(),
+      api.getDevices(),
+    ]);
+
+    const schedEl = document.getElementById('scheduler-status');
+    if (schedEl) {
+      schedEl.innerHTML = scheduler.slots.map(s =>
+        `<div class="setting-row"><span>${s}</span><span class="badge">✓</span></div>`
+      ).join('');
+    }
+
+    const devEl = document.getElementById('devices-list');
+    if (devEl) {
+      if (devices.count === 0) {
+        devEl.innerHTML = '<div class="setting-row">未发现设备</div>';
+      } else {
+        devEl.innerHTML = devices.devices.map(d =>
+          `<div class="setting-row"><span>${d.name}</span><button class="btn-small" onclick="castToDevice('${d.location}')">推送</button></div>`
+        ).join('');
+      }
+    }
+  } catch {}
+}
+
+window.castToDevice = async (deviceUrl) => {
+  const song = player.getCurrentSong();
+  if (!song?.url) return alert('请先播放一首歌');
+  await fetch('/api/cast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceUrl, url: song.url }),
+  });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const audioEl = document.getElementById('audio');
+  if (audioEl) player.init(audioEl);
+
+  const messagesEl = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  if (messagesEl && chatInput) chat.init(messagesEl, chatInput);
+
+  document.getElementById('chat-send')?.addEventListener('click', () => chat.sendMessage());
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      showView(view);
+      if (view === 'settings') loadSettings();
+    });
+  });
+
+  document.getElementById('btn-play')?.addEventListener('click', () => player.togglePlay());
+  document.getElementById('btn-next')?.addEventListener('click', async () => {
+    const result = await api.getNext();
+    if (result.play?.length) player.playSong(result.play[0]);
+  });
+
+  document.getElementById('progress-container')?.addEventListener('click', (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    player.seek((e.clientX - rect.left) / rect.width);
+  });
+
+  document.getElementById('volume')?.addEventListener('input', (e) => {
+    player.setVolume(e.target.value / 100);
+  });
+
+  api.connectWS((data) => {
+    if (data.type === 'auto-broadcast') {
+      chat.handleBroadcast(data);
+    }
+  });
+
+  api.getNow().then(now => {
+    if (now.song_name) {
+      document.getElementById('song-title').textContent = now.song_name;
+      document.getElementById('song-artist').textContent = now.artist || '';
+    }
+  });
+
+  showView('player');
+});
