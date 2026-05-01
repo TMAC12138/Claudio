@@ -1,17 +1,26 @@
 import Fastify from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
 import dotenv from 'dotenv';
+import { createReadStream, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import * as db from './lib/db.js';
 import * as router from './lib/router.js';
 import * as context from './lib/context.js';
 import * as claude from './lib/claude.js';
 import * as ncm from './lib/ncm.js';
+import * as tts from './lib/tts.js';
+import * as upnp from './lib/upnp.js';
+import * as scheduler from './lib/scheduler.js';
 
 dotenv.config();
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Configure modules
 ncm.configure({ baseUrl: process.env.NCM_BASE_URL });
 claude.configure({ path: process.env.CLAUDE_PATH || 'claude' });
+tts.configure({ apiKey: process.env.FISH_API_KEY, voiceId: process.env.FISH_VOICE_ID });
 
 // Initialize
 db.initDb();
@@ -25,6 +34,23 @@ app.addHook('onRequest', (req, reply, done) => {
   reply.header('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return reply.send();
   done();
+});
+
+// Helper: add TTS to result
+async function addTts(result) {
+  if (result.say) {
+    const ttsResult = await tts.synthesize(result.say);
+    result.ttsUrl = ttsResult.url;
+    if (ttsResult.error) app.log.warn('TTS error:', ttsResult.error);
+  }
+  return result;
+}
+
+// Static route for TTS files
+app.get('/tts/:filename', async (req, reply) => {
+  const filePath = join(__dirname, 'cache', 'tts', req.params.filename);
+  if (!existsSync(filePath)) return reply.code(404).send({ error: 'not found' });
+  return reply.type('audio/mpeg').send(createReadStream(filePath));
 });
 
 // POST /api/chat — main chat endpoint
@@ -41,7 +67,7 @@ app.post('/api/chat', async (req, reply) => {
       if (!songs.length) {
         const resp = { say: `没有找到 "${result.data.keyword}" 相关的歌曲`, play: [], reason: 'no_results' };
         db.saveMessage('assistant', resp.say);
-        return resp;
+        return addTts(resp);
       }
       const enriched = await Promise.all(songs.slice(0, 3).map(async s => {
         const { url } = await ncm.getUrl(s.id);
@@ -49,7 +75,7 @@ app.post('/api/chat', async (req, reply) => {
       }));
       db.saveMessage('assistant', `正在播放: ${enriched[0].name}`);
       db.recordPlay(enriched[0], 'chat');
-      return { say: `好的，为你播放 ${enriched[0].name}`, play: enriched, reason: 'user_request' };
+      return addTts({ say: `好的，为你播放 ${enriched[0].name}`, play: enriched, reason: 'user_request' });
     } catch (err) {
       app.log.error(err);
       return { say: '音乐服务暂时不可用，请稍后再试', play: [], reason: 'ncm_error' };
@@ -60,7 +86,7 @@ app.post('/api/chat', async (req, reply) => {
     const prompt = await context.assemble({ input: '请推荐下一首歌，用JSON格式回复', db });
     const aiResult = await claude.ask(prompt);
     db.saveMessage('assistant', aiResult.say);
-    return aiResult;
+    return addTts(aiResult);
   }
 
   if (result.type === 'now') {
@@ -86,7 +112,7 @@ app.post('/api/chat', async (req, reply) => {
       }
     } catch {}
   }
-  return aiResult;
+  return addTts(aiResult);
 });
 
 // GET /api/now — current playback
@@ -98,19 +124,16 @@ app.get('/api/now', async () => {
 // GET /api/next — next recommendation
 app.get('/api/next', async () => {
   const prompt = await context.assemble({ input: '推荐下一首歌', db });
-  return claude.ask(prompt);
+  return addTts(await claude.ask(prompt));
 });
 
 // GET /api/taste — user taste profile
 app.get('/api/taste', async () => {
-  const { readFileSync, existsSync } = await import('fs');
-  const { join, dirname } = await import('path');
-  const { fileURLToPath } = await import('url');
-  const dir = dirname(fileURLToPath(import.meta.url));
+  const { readFileSync } = await import('fs');
   const files = ['taste.md', 'routines.md', 'mood-rules.md'];
   const taste = {};
   for (const f of files) {
-    const p = join(dir, 'user', f);
+    const p = join(__dirname, 'user', f);
     taste[f.replace('.md', '')] = existsSync(p) ? readFileSync(p, 'utf-8') : '';
   }
   return taste;
@@ -121,18 +144,65 @@ app.get('/api/plan/today', async () => {
   return db.getTodayPlan();
 });
 
-// WS /stream — WebSocket stub (M2 will push events)
+// GET /api/devices — discover UPnP devices
+app.get('/api/devices', async () => {
+  const devices = await upnp.discover();
+  return { devices, count: devices.length };
+});
+
+// POST /api/cast — push audio to speaker
+app.post('/api/cast', async (req, reply) => {
+  const { deviceUrl, url } = req.body || {};
+  if (!deviceUrl || !url) return reply.code(400).send({ error: 'deviceUrl and url required' });
+  try {
+    return await upnp.play(deviceUrl, url);
+  } catch (err) {
+    return reply.code(500).send({ error: err.message });
+  }
+});
+
+// POST /api/stop — stop playback on speaker
+app.post('/api/stop', async (req, reply) => {
+  const { deviceUrl } = req.body || {};
+  if (!deviceUrl) return reply.code(400).send({ error: 'deviceUrl required' });
+  try {
+    return await upnp.stop(deviceUrl);
+  } catch (err) {
+    return reply.code(500).send({ error: err.message });
+  }
+});
+
+// GET /api/scheduler — scheduler status
+app.get('/api/scheduler', async () => scheduler.getStatus());
+
+// WS /stream — WebSocket with broadcast
+const clients = new Set();
+
 try {
   await app.register(fastifyWebsocket);
   app.get('/stream', { websocket: true }, (socket) => {
+    clients.add(socket);
     const interval = setInterval(() => {
       if (socket.readyState === 1) socket.ping();
     }, 30000);
-    socket.on('close', () => clearInterval(interval));
+    socket.on('close', () => {
+      clearInterval(interval);
+      clients.delete(socket);
+    });
   });
 } catch (err) {
   app.log.warn('WebSocket registration failed (non-fatal):', err.message);
 }
+
+// Wire scheduler broadcast to WebSocket
+function wsBroadcast(data) {
+  const msg = JSON.stringify(data);
+  for (const client of clients) {
+    if (client.readyState === 1) client.send(msg);
+  }
+}
+scheduler.setBroadcast(wsBroadcast);
+scheduler.start();
 
 // Start
 const port = process.env.PORT || 3000;
