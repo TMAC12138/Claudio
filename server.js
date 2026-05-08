@@ -13,6 +13,7 @@ import * as ncm from './lib/ncm.js';
 import * as tts from './lib/tts.js';
 import * as upnp from './lib/upnp.js';
 import * as scheduler from './lib/scheduler.js';
+import * as weather from './lib/weather.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 ncm.configure({ baseUrl: process.env.NCM_BASE_URL });
 claude.configure({ path: process.env.CLAUDE_PATH || 'claude' });
 tts.configure({ apiKey: process.env.FISH_API_KEY, voiceId: process.env.FISH_VOICE_ID });
+weather.configure({ apiKey: process.env.WEATHER_API_KEY, city: process.env.WEATHER_CITY });
 
 // Initialize
 db.initDb();
@@ -192,6 +194,31 @@ app.post('/api/prefs', async (req, reply) => {
   if (!key) return reply.code(400).send({ error: 'key required' });
   db.setPref(key, String(value));
   return { ok: true };
+});
+
+// GET /api/weather — current weather
+app.get('/api/weather', async () => weather.getWeather());
+
+// POST /api/taste — update user taste file
+app.post('/api/taste', async (req, reply) => {
+  const { file, content } = req.body || {};
+  if (!file || !content) return reply.code(400).send({ error: 'file and content required' });
+  const allowed = ['taste.md', 'routines.md', 'mood-rules.md'];
+  if (!allowed.includes(file)) return reply.code(400).send({ error: 'invalid file name' });
+  const { writeFileSync } = await import('fs');
+  writeFileSync(join(__dirname, 'user', file), content, 'utf-8');
+  return { ok: true };
+});
+
+// GET /api/stats — playback statistics
+app.get('/api/stats', async () => {
+  const d = db.getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const totalPlays = d.prepare("SELECT COUNT(*) as count FROM plays WHERE date(played_at) = ?").get(today)?.count || 0;
+  const skipped = d.prepare("SELECT COUNT(*) as count FROM plays WHERE date(played_at) = ? AND skipped = 1").get(today)?.count || 0;
+  const totalMessages = d.prepare("SELECT COUNT(*) as count FROM messages WHERE date(created_at) = ?").get(today)?.count || 0;
+  const skipRate = totalPlays > 0 ? Math.round((skipped / totalPlays) * 100) : 0;
+  return { totalPlays, skipped, skipRate, totalMessages };
 });
 
 // GET /api/scheduler — scheduler status
