@@ -5,3 +5,4 @@ state.db-shm
 state.db-wal
 cache/
 .DS_Store
+ncm-api/
