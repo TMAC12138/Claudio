@@ -31,6 +31,17 @@ export function playSong(song) {
 
 export function togglePlay() {
   if (!audio) return;
+
+  // If no song loaded, request next recommendation
+  if (!audio.src || audio.src === location.href) {
+    import('./api.js').then(api => {
+      api.getNext().then(result => {
+        if (result.play?.length) playSong(result.play[0]);
+      });
+    });
+    return;
+  }
+
   if (audio.paused) {
     audio.play();
     document.getElementById('album-cover')?.classList.add('playing');
