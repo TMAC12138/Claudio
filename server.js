@@ -65,7 +65,8 @@ app.get('/tts/:filename', async (req, reply) => {
 // POST /api/chat — main chat endpoint
 app.post('/api/chat', async (req, reply) => {
   const { message } = req.body || {};
-  if (!message) return reply.code(400).send({ error: 'message required' });
+  if (!message || typeof message !== 'string') return reply.code(400).send({ error: 'message required' });
+  if (message.length > 500) return reply.code(400).send({ error: 'message too long (max 500 chars)' });
 
   db.saveMessage('user', message);
   const result = await router.route(message, db);
@@ -163,6 +164,7 @@ app.get('/api/devices', async () => {
 app.post('/api/cast', async (req, reply) => {
   const { deviceUrl, url } = req.body || {};
   if (!deviceUrl || !url) return reply.code(400).send({ error: 'deviceUrl and url required' });
+  if (typeof deviceUrl !== 'string' || typeof url !== 'string') return reply.code(400).send({ error: 'invalid parameters' });
   try {
     return await upnp.play(deviceUrl, url);
   } catch (err) {
@@ -191,8 +193,9 @@ app.get('/api/prefs', async () => {
 // POST /api/prefs — update preference
 app.post('/api/prefs', async (req, reply) => {
   const { key, value } = req.body || {};
-  if (!key) return reply.code(400).send({ error: 'key required' });
-  db.setPref(key, String(value));
+  if (!key || typeof key !== 'string') return reply.code(400).send({ error: 'key required' });
+  if (key.length > 100) return reply.code(400).send({ error: 'key too long' });
+  db.setPref(key, String(value ?? ''));
   return { ok: true };
 });
 
@@ -202,7 +205,8 @@ app.get('/api/weather', async () => weather.getWeather());
 // POST /api/taste — update user taste file
 app.post('/api/taste', async (req, reply) => {
   const { file, content } = req.body || {};
-  if (!file || !content) return reply.code(400).send({ error: 'file and content required' });
+  if (!file || !content || typeof content !== 'string') return reply.code(400).send({ error: 'file and content required' });
+  if (content.length > 5000) return reply.code(400).send({ error: 'content too long (max 5000 chars)' });
   const allowed = ['taste.md', 'routines.md', 'mood-rules.md'];
   if (!allowed.includes(file)) return reply.code(400).send({ error: 'invalid file name' });
   const { writeFileSync } = await import('fs');
@@ -252,6 +256,12 @@ function wsBroadcast(data) {
 }
 scheduler.setBroadcast(wsBroadcast);
 scheduler.start();
+
+// Global error handler
+app.setErrorHandler((err, req, reply) => {
+  app.log.error(err);
+  reply.code(500).send({ error: 'Internal server error' });
+});
 
 // Start
 const port = process.env.PORT || 3000;
