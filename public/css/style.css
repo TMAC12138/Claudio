@@ -29,8 +29,12 @@ body {
   padding: 16px 20px;
   font-size: 18px;
   font-weight: 600;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
+.weather-badge { font-size: 13px; color: var(--text-dim); }
 
 .logo { color: var(--accent); }
 
@@ -195,6 +199,12 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
 }
+
+/* Profile */
+.profile-content { padding: 16px 20px; overflow-y: auto; }
+.profile-content h3 { font-size: 14px; color: var(--text-dim); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 1px; }
+.taste-card { background: var(--surface); padding: 12px; border-radius: var(--radius); font-size: 13px; line-height: 1.6; white-space: pre-wrap; max-height: 150px; overflow-y: auto; }
+.btn-edit { margin-top: 6px; background: none; border: 1px solid var(--accent); color: var(--accent); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; }
 
 /* Bottom Nav */
 .bottom-nav {

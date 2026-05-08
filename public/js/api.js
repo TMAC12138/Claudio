@@ -49,6 +49,16 @@ export async function setPref(key, value) {
   return res.json();
 }
 
+export async function getWeather() {
+  const res = await fetch(`${API_BASE}/api/weather`);
+  return res.json();
+}
+
+export async function getStats() {
+  const res = await fetch(`${API_BASE}/api/stats`);
+  return res.json();
+}
+
 export function connectWS(onMessage) {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   ws = new WebSocket(`${protocol}//${location.host}/stream`);

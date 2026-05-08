@@ -15,6 +15,7 @@
     <div id="view-player" class="view active">
       <header class="header">
         <span class="logo">♬ Claudio</span>
+        <span class="weather-badge" id="weather-badge"></span>
       </header>
 
       <div class="player-art">
@@ -60,12 +61,34 @@
       </div>
     </div>
 
+    <!-- Profile View -->
+    <div id="view-profile" class="view">
+      <header class="header">
+        <span>👤 我的品味</span>
+      </header>
+      <div class="profile-content">
+        <h3>🎵 音乐口味</h3>
+        <div class="taste-card" id="taste-content"></div>
+        <button class="btn-edit" onclick="editTaste('taste.md')">编辑口味</button>
+
+        <h3>📅 每日作息</h3>
+        <div class="taste-card" id="routines-content"></div>
+        <button class="btn-edit" onclick="editTaste('routines.md')">编辑作息</button>
+
+        <h3>🎭 情绪规则</h3>
+        <div class="taste-card" id="mood-content"></div>
+        <button class="btn-edit" onclick="editTaste('mood-rules.md')">编辑规则</button>
+      </div>
+    </div>
+
     <!-- Settings View -->
     <div id="view-settings" class="view">
       <header class="header">
         <span>⚙️ 设置</span>
       </header>
       <div class="settings-content">
+        <h3>📊 今日统计</h3>
+        <div id="stats-content"></div>
         <h3>定时广播</h3>
         <div id="scheduler-status"></div>
         <h3>UPnP 音响</h3>
@@ -78,6 +101,7 @@
     <nav class="bottom-nav">
       <button class="nav-btn active" data-view="player">🎵 播放</button>
       <button class="nav-btn" data-view="chat">💬 聊天</button>
+      <button class="nav-btn" data-view="profile">👤 品味</button>
       <button class="nav-btn" data-view="settings">⚙️ 设置</button>
     </nav>
   </div>

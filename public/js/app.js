@@ -14,6 +14,34 @@ function showView(name) {
   currentView = name;
 }
 
+async function loadProfile() {
+  try {
+    const taste = await api.getTaste();
+    const tasteEl = document.getElementById('taste-content');
+    const routinesEl = document.getElementById('routines-content');
+    const moodEl = document.getElementById('mood-content');
+    if (tasteEl) tasteEl.textContent = taste.taste || '未设置';
+    if (routinesEl) routinesEl.textContent = taste.routines || '未设置';
+    if (moodEl) moodEl.textContent = taste['mood-rules'] || '未设置';
+  } catch {}
+}
+
+window.editTaste = async (file) => {
+  const el = file === 'taste.md' ? 'taste-content'
+    : file === 'routines.md' ? 'routines-content'
+    : 'mood-content';
+  const current = document.getElementById(el)?.textContent || '';
+  const newContent = prompt(`编辑 ${file}:`, current);
+  if (newContent === null) return;
+
+  await fetch('/api/taste', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file, content: newContent }),
+  });
+  loadProfile();
+};
+
 async function loadSettings() {
   try {
     const [scheduler, devices] = await Promise.all([
@@ -37,6 +65,17 @@ async function loadSettings() {
           `<div class="setting-row"><span>${d.name}</span><button class="btn-small" onclick="castToDevice('${d.location}')">推送</button></div>`
         ).join('');
       }
+    }
+
+    const stats = await api.getStats();
+    const statsEl = document.getElementById('stats-content');
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="setting-row"><span>播放次数</span><span>${stats.totalPlays} 首</span></div>
+        <div class="setting-row"><span>跳过次数</span><span>${stats.skipped} 次</span></div>
+        <div class="setting-row"><span>跳过率</span><span>${stats.skipRate}%</span></div>
+        <div class="setting-row"><span>对话次数</span><span>${stats.totalMessages} 次</span></div>
+      `;
     }
   } catch {}
 }
@@ -65,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
       showView(view);
+      if (view === 'profile') loadProfile();
       if (view === 'settings') loadSettings();
     });
   });
@@ -96,6 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('song-artist').textContent = now.artist || '';
     }
   });
+
+  api.getWeather().then(w => {
+    const badge = document.getElementById('weather-badge');
+    if (badge && !w.error) {
+      badge.textContent = `${w.temp}°C ${w.description}`;
+    }
+  }).catch(() => {});
 
   showView('player');
 });
