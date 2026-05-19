@@ -1,6 +1,6 @@
-import * as api from './api.js';
-import * as player from './player.js';
-import * as chat from './chat.js';
+import * as api from './api.js?v=20260518-2';
+import * as player from './player.js?v=20260518-2';
+import * as chat from './chat.js?v=20260518-2';
 
 let currentView = 'player';
 
@@ -90,6 +90,31 @@ window.castToDevice = async (deviceUrl) => {
   });
 };
 
+async function stopService(kind) {
+  const isClaudio = kind === 'claudio';
+  const label = isClaudio ? 'Claudio' : 'NCM Enhanced';
+  const ok = confirm(`确定要关闭 ${label} 服务吗？`);
+  if (!ok) return;
+
+  const statusEl = document.getElementById('service-status');
+  if (statusEl) statusEl.textContent = `正在关闭 ${label}...`;
+
+  const button = document.getElementById(isClaudio ? 'btn-stop-claudio' : 'btn-stop-ncm');
+  if (button) button.disabled = true;
+
+  try {
+    const res = await fetch(isClaudio ? '/api/system/stop-claudio' : '/api/system/stop-ncm', {
+      method: 'POST',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '关闭失败');
+    if (statusEl) statusEl.textContent = `${label} 已发送关闭请求。`;
+  } catch (err) {
+    if (statusEl) statusEl.textContent = `${label} 关闭失败：${err.message}`;
+    if (button) button.disabled = false;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const audioEl = document.getElementById('audio');
   if (audioEl) player.init(audioEl);
@@ -110,10 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-play')?.addEventListener('click', () => player.togglePlay());
-  document.getElementById('btn-next')?.addEventListener('click', async () => {
-    const result = await api.getNext();
-    if (result.play?.length) player.playSong(result.play[0]);
+  document.getElementById('btn-next')?.addEventListener('click', (e) => {
+    player.requestNextSong(e.currentTarget);
   });
+  document.getElementById('btn-chat-toggle')?.addEventListener('click', () => {
+    showView('chat');
+    chatInput?.focus();
+  });
+  document.getElementById('btn-stop-ncm')?.addEventListener('click', () => stopService('ncm'));
+  document.getElementById('btn-stop-claudio')?.addEventListener('click', () => stopService('claudio'));
 
   document.getElementById('progress-container')?.addEventListener('click', (e) => {
     const rect = e.currentTarget.getBoundingClientRect();

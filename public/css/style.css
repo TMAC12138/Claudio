@@ -200,6 +200,36 @@ body {
   cursor: pointer;
 }
 
+.service-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-danger {
+  background: #7f1d1d;
+  color: white;
+  border: 1px solid #ef4444;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.service-status {
+  min-height: 18px;
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Profile */
 .profile-content { padding: 16px 20px; overflow-y: auto; }
 .profile-content h3 { font-size: 14px; color: var(--text-dim); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 1px; }

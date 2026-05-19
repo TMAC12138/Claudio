@@ -1,5 +1,5 @@
-import * as api from './api.js';
-import { playSong } from './player.js';
+import * as api from './api.js?v=20260518-2';
+import { playSong } from './player.js?v=20260518-2';
 
 let messagesEl = null;
 let inputEl = null;

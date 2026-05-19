@@ -94,6 +94,12 @@
         <h3>UPnP 音响</h3>
         <div id="devices-list"></div>
         <button class="btn-scan" onclick="location.reload()">刷新</button>
+        <h3>本地服务</h3>
+        <div class="service-actions">
+          <button id="btn-stop-ncm" class="btn-danger">关闭 NCM Enhanced</button>
+          <button id="btn-stop-claudio" class="btn-danger">关闭 Claudio</button>
+        </div>
+        <div id="service-status" class="service-status"></div>
       </div>
     </div>
 
@@ -106,7 +112,7 @@
     </nav>
   </div>
 
-  <script type="module" src="/js/app.js"></script>
+  <script type="module" src="/js/app.js?v=20260518-2"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');

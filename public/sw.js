@@ -1,4 +1,4 @@
-const CACHE_NAME = 'claudio-v1';
+const CACHE_NAME = 'claudio-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -52,8 +52,12 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Static assets: Cache-First
+  // Static assets: Network-First, so UI fixes are not hidden by stale JS/CSS.
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request).then(res => {
+      const clone = res.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });

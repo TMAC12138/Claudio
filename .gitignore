@@ -6,3 +6,5 @@ state.db-wal
 cache/
 .DS_Store
 ncm-api/
+ncm-enhanced-api/
+.claudio-run/

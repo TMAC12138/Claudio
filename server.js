@@ -2,9 +2,11 @@ import Fastify from 'fastify';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import dotenv from 'dotenv';
+import { execFile } from 'child_process';
 import { createReadStream, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { promisify } from 'util';
 import * as db from './lib/db.js';
 import * as router from './lib/router.js';
 import * as context from './lib/context.js';
@@ -18,9 +20,10 @@ import * as weather from './lib/weather.js';
 dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const execFileAsync = promisify(execFile);
 
 // Configure modules
-ncm.configure({ baseUrl: process.env.NCM_BASE_URL });
+ncm.configure({ baseUrl: process.env.NCM_BASE_URL, level: process.env.NCM_LEVEL });
 claude.configure({ path: process.env.CLAUDE_PATH || 'claude' });
 tts.configure({ apiKey: process.env.FISH_API_KEY, voiceId: process.env.FISH_VOICE_ID });
 weather.configure({ apiKey: process.env.WEATHER_API_KEY, city: process.env.WEATHER_CITY });
@@ -55,6 +58,53 @@ async function addTts(result) {
   return result;
 }
 
+async function attachPlayableSongs(result, source) {
+  if (!result.play?.length) return result;
+
+  try {
+    const playable = await ncm.resolvePlayableSongs(result.play, 3);
+    result.play = playable;
+    if (playable.length) db.recordPlay(playable[0], source);
+  } catch (err) {
+    app.log.warn('Music URL resolve error:', err.message);
+    result.play = [];
+  }
+
+  return result;
+}
+
+function getLocalNcmPort() {
+  const rawUrl = process.env.NCM_BASE_URL || 'http://localhost:3001';
+  const url = new URL(rawUrl);
+  const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+  if (!localHosts.has(url.hostname)) {
+    throw new Error('NCM_BASE_URL is not a local service');
+  }
+  return Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+}
+
+async function stopListeningPort(port) {
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('invalid port');
+  }
+
+  let stdout = '';
+  try {
+    const result = await execFileAsync('lsof', [`-tiTCP:${port}`, '-sTCP:LISTEN']);
+    stdout = result.stdout;
+  } catch (err) {
+    if (err.code !== 1) throw err;
+    stdout = err.stdout || '';
+  }
+  const pids = stdout.trim().split('\n').map(Number).filter(Boolean);
+  if (!pids.length) return { stopped: false, port, pids: [] };
+
+  for (const pid of pids) {
+    if (pid !== process.pid) process.kill(pid, 'SIGTERM');
+  }
+  return { stopped: true, port, pids };
+}
+
 // Static route for TTS files
 app.get('/tts/:filename', async (req, reply) => {
   const filePath = join(__dirname, 'cache', 'tts', req.params.filename);
@@ -79,10 +129,12 @@ app.post('/api/chat', async (req, reply) => {
         db.saveMessage('assistant', resp.say);
         return addTts(resp);
       }
-      const enriched = await Promise.all(songs.slice(0, 3).map(async s => {
-        const { url } = await ncm.getUrl(s.id);
-        return { ...s, url };
-      }));
+      const enriched = await ncm.resolvePlayableSongs(songs, 3);
+      if (!enriched.length) {
+        const resp = { say: `找到了 "${result.data.keyword}"，但暂时没有可播放的音频链接`, play: [], reason: 'no_playable_url' };
+        db.saveMessage('assistant', resp.say);
+        return addTts(resp);
+      }
       db.saveMessage('assistant', `正在播放: ${enriched[0].name}`);
       db.recordPlay(enriched[0], 'chat');
       return addTts({ say: `好的，为你播放 ${enriched[0].name}`, play: enriched, reason: 'user_request' });
@@ -95,6 +147,7 @@ app.post('/api/chat', async (req, reply) => {
   if (result.type === 'next') {
     const prompt = await context.assemble({ input: '请推荐下一首歌，用JSON格式回复', db });
     const aiResult = await claude.ask(prompt);
+    await attachPlayableSongs(aiResult, 'chat');
     db.saveMessage('assistant', aiResult.say);
     return addTts(aiResult);
   }
@@ -110,18 +163,7 @@ app.post('/api/chat', async (req, reply) => {
   const prompt = await context.assemble({ input: result.data.input, db });
   const aiResult = await claude.ask(prompt);
   db.saveMessage('assistant', aiResult.say);
-  if (aiResult.play?.length) {
-    try {
-      const first = aiResult.play[0];
-      const keyword = `${first.name || first} ${first.artist || ''}`.trim();
-      const songs = await ncm.search(keyword);
-      if (songs.length) {
-        const { url } = await ncm.getUrl(songs[0].id);
-        aiResult.play = [{ ...songs[0], url }];
-        db.recordPlay(songs[0], 'chat');
-      }
-    } catch {}
-  }
+  await attachPlayableSongs(aiResult, 'chat');
   return addTts(aiResult);
 });
 
@@ -134,7 +176,9 @@ app.get('/api/now', async () => {
 // GET /api/next — next recommendation
 app.get('/api/next', async () => {
   const prompt = await context.assemble({ input: '推荐下一首歌', db });
-  return addTts(await claude.ask(prompt));
+  const result = await claude.ask(prompt);
+  await attachPlayableSongs(result, 'next');
+  return addTts(result);
 });
 
 // GET /api/taste — user taste profile
@@ -227,6 +271,28 @@ app.get('/api/stats', async () => {
 
 // GET /api/scheduler — scheduler status
 app.get('/api/scheduler', async () => scheduler.getStatus());
+
+// POST /api/system/stop-ncm — stop local NCM Enhanced service
+app.post('/api/system/stop-ncm', async (req, reply) => {
+  try {
+    return await stopListeningPort(getLocalNcmPort());
+  } catch (err) {
+    return reply.code(500).send({ error: err.message });
+  }
+});
+
+// POST /api/system/stop-claudio — stop this local Claudio service
+app.post('/api/system/stop-claudio', async () => {
+  setTimeout(async () => {
+    try {
+      scheduler.stop();
+      await app.close();
+    } finally {
+      process.exit(0);
+    }
+  }, 200);
+  return { stopped: true, port: Number(process.env.PORT || 3000) };
+});
 
 // WS /stream — WebSocket with broadcast
 const clients = new Set();
