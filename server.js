@@ -181,6 +181,23 @@ app.get('/api/next', async () => {
   return addTts(result);
 });
 
+// GET /api/lyric/:id — lyrics for the player view
+app.get('/api/lyric/:id', async (req, reply) => {
+  const { id } = req.params || {};
+  if (!id) return reply.code(400).send({ error: 'id required' });
+  try {
+    return await ncm.getLyric(id);
+  } catch (err) {
+    return reply.code(502).send({ error: err.message });
+  }
+});
+
+// POST /api/play/skip-current — mark latest play as skipped
+app.post('/api/play/skip-current', async () => {
+  const result = db.markRecentPlaySkipped();
+  return { ok: true, changed: result.changes || 0 };
+});
+
 // GET /api/taste — user taste profile
 app.get('/api/taste', async () => {
   const { readFileSync } = await import('fs');

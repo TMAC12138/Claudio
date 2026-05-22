@@ -1,5 +1,5 @@
-import * as api from './api.js?v=20260518-2';
-import { playSong } from './player.js?v=20260518-2';
+import * as api from './api.js?v=20260518-3';
+import { playResult, playSong } from './player.js?v=20260518-3';
 
 let messagesEl = null;
 let inputEl = null;
@@ -22,7 +22,10 @@ export async function sendMessage() {
   const text = inputEl?.value?.trim();
   if (!text) return;
   inputEl.value = '';
+  return sendText(text);
+}
 
+export async function sendText(text) {
   addMessage('user', text);
 
   try {
@@ -34,10 +37,12 @@ export async function sendMessage() {
     }
 
     if (result.play?.length) {
-      playSong(result.play[0]);
+      playResult(result);
     }
+    return result;
   } catch (err) {
     addMessage('dj', '抱歉，出了点问题，请稍后再试。');
+    return null;
   }
 }
 
@@ -49,7 +54,7 @@ export function handleBroadcast(data) {
   }
 
   if (data.play?.length) {
-    playSong(data.play[0]);
+    playResult(data);
   }
 }
 

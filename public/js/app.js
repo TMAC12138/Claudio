@@ -1,6 +1,6 @@
-import * as api from './api.js?v=20260518-2';
-import * as player from './player.js?v=20260518-2';
-import * as chat from './chat.js?v=20260518-2';
+import * as api from './api.js?v=20260518-3';
+import * as player from './player.js?v=20260518-3';
+import * as chat from './chat.js?v=20260518-3';
 
 let currentView = 'player';
 
@@ -136,11 +136,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-play')?.addEventListener('click', () => player.togglePlay());
   document.getElementById('btn-next')?.addEventListener('click', (e) => {
-    player.requestNextSong(e.currentTarget);
+    player.skipCurrent(e.currentTarget);
   });
+  document.getElementById('btn-prev')?.addEventListener('click', () => player.playPrevious());
   document.getElementById('btn-chat-toggle')?.addEventListener('click', () => {
     showView('chat');
     chatInput?.focus();
+  });
+  document.getElementById('player-chat-send')?.addEventListener('click', () => sendPlayerMessage());
+  document.getElementById('player-chat-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendPlayerMessage();
+    }
+  });
+  document.querySelectorAll('#mood-row button').forEach(button => {
+    button.addEventListener('click', () => {
+      chat.sendText(button.dataset.prompt);
+    });
   });
   document.getElementById('btn-stop-ncm')?.addEventListener('click', () => stopService('ncm'));
   document.getElementById('btn-stop-claudio')?.addEventListener('click', () => stopService('claudio'));
@@ -162,8 +175,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   api.getNow().then(now => {
     if (now.song_name) {
-      document.getElementById('song-title').textContent = now.song_name;
-      document.getElementById('song-artist').textContent = now.artist || '';
+      player.playSong({
+        id: now.song_id,
+        name: now.song_name,
+        artist: now.artist,
+        album: now.album,
+      }, {
+        say: '这是上次记录到的播放状态。点击继续或跳过当前，我会接着为你安排下一首。',
+        reason: `来源：${now.source || 'history'}`,
+      });
     }
   });
 
@@ -176,3 +196,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   showView('player');
 });
+
+async function sendPlayerMessage() {
+  const input = document.getElementById('player-chat-input');
+  const text = input?.value?.trim();
+  if (!text) return;
+  input.value = '';
+  await chat.sendText(text);
+}

@@ -20,6 +20,16 @@ export async function getNext() {
   return res.json();
 }
 
+export async function getLyric(id) {
+  const res = await fetch(`${API_BASE}/api/lyric/${encodeURIComponent(id)}`);
+  return res.json();
+}
+
+export async function skipCurrent() {
+  const res = await fetch(`${API_BASE}/api/play/skip-current`, { method: 'POST' });
+  return res.json();
+}
+
 export async function getTaste() {
   const res = await fetch(`${API_BASE}/api/taste`);
   return res.json();
