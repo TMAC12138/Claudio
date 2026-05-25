@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#e94560">
+  <meta name="theme-color" content="#f4efe7">
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/css/style.css">
@@ -21,7 +21,7 @@
             <div>
               <p class="eyebrow">Personal AI DJ Radio</p>
               <h1>Claudio</h1>
-              <p class="hero-subtitle">本地运行的个人 AI DJ 电台，小月读懂你的品味与此刻状态。</p>
+              <p class="hero-subtitle">本地运行的个人 AI DJ 电台，小月按你的品味、时间和状态接歌。</p>
             </div>
           </div>
           <div class="status-pills" aria-label="运行状态">
@@ -49,9 +49,9 @@
             </div>
 
             <div class="metric-grid">
-              <div class="metric-card"><span>今日接受率</span><b>86%</b></div>
-              <div class="metric-card"><span>离线缓存</span><b>10 首</b></div>
-              <div class="metric-card"><span>跳过率</span><b>低</b></div>
+              <div class="metric-card"><span>播放次数</span><b id="metric-plays">--</b></div>
+              <div class="metric-card"><span>对话次数</span><b id="metric-messages">--</b></div>
+              <div class="metric-card"><span>跳过率</span><b id="metric-skip-rate">--</b></div>
             </div>
 
             <div class="context-sources" aria-label="推荐上下文来源">
@@ -67,7 +67,7 @@
           <section class="panel now-card">
             <div class="section-head">
               <span>Now Playing</span>
-              <strong id="play-status" class="live-status">准备播放</strong>
+              <strong id="play-status" class="live-status" aria-live="polite">准备播放</strong>
             </div>
 
             <div class="track-panel">

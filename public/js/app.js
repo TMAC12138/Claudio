@@ -80,6 +80,18 @@ async function loadSettings() {
   } catch {}
 }
 
+async function loadDashboardStats() {
+  try {
+    const stats = await api.getStats();
+    const playsEl = document.getElementById('metric-plays');
+    const messagesEl = document.getElementById('metric-messages');
+    const skipEl = document.getElementById('metric-skip-rate');
+    if (playsEl) playsEl.textContent = `${stats.totalPlays || 0} 首`;
+    if (messagesEl) messagesEl.textContent = `${stats.totalMessages || 0} 次`;
+    if (skipEl) skipEl.textContent = `${stats.skipRate || 0}%`;
+  } catch {}
+}
+
 window.castToDevice = async (deviceUrl) => {
   const song = player.getCurrentSong();
   if (!song?.url) return alert('请先播放一首歌');
@@ -202,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }).catch(() => {});
 
+  loadDashboardStats();
   showView('player');
 });
 
