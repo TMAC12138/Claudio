@@ -278,10 +278,15 @@ app.post('/api/taste', async (req, reply) => {
 // GET /api/stats — playback statistics
 app.get('/api/stats', async () => {
   const d = db.getDb();
-  const today = new Date().toISOString().slice(0, 10);
-  const totalPlays = d.prepare("SELECT COUNT(*) as count FROM plays WHERE date(played_at) = ?").get(today)?.count || 0;
-  const skipped = d.prepare("SELECT COUNT(*) as count FROM plays WHERE date(played_at) = ? AND skipped = 1").get(today)?.count || 0;
-  const totalMessages = d.prepare("SELECT COUNT(*) as count FROM messages WHERE date(created_at) = ?").get(today)?.count || 0;
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const totalPlays = d.prepare("SELECT COUNT(*) as count FROM plays WHERE date(played_at, 'localtime') = ?").get(today)?.count || 0;
+  const skipped = d.prepare("SELECT COUNT(*) as count FROM plays WHERE date(played_at, 'localtime') = ? AND skipped = 1").get(today)?.count || 0;
+  const totalMessages = d.prepare("SELECT COUNT(*) as count FROM messages WHERE date(created_at, 'localtime') = ?").get(today)?.count || 0;
   const skipRate = totalPlays > 0 ? Math.round((skipped / totalPlays) * 100) : 0;
   return { totalPlays, skipped, skipRate, totalMessages };
 });

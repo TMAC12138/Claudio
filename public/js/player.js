@@ -5,9 +5,11 @@ let loadingNext = false;
 let queue = [];
 let history = [];
 let lyricLines = [];
+let lyricsAutoScroll = true;
 
 export function init(audioElement) {
   audio = audioElement;
+  initLyricsToggle();
 
   audio.addEventListener('ended', () => {
     setPlayingState(false);
@@ -25,6 +27,24 @@ export function init(audioElement) {
   audio.addEventListener('error', () => setPlayingState(false));
 
   updateQueueCount();
+}
+
+function initLyricsToggle() {
+  const button = document.getElementById('btn-lyrics-autoscroll');
+  if (!button) return;
+  button.addEventListener('click', () => {
+    lyricsAutoScroll = !lyricsAutoScroll;
+    renderLyricsToggle();
+  });
+  renderLyricsToggle();
+}
+
+function renderLyricsToggle() {
+  const button = document.getElementById('btn-lyrics-autoscroll');
+  if (!button) return;
+  button.classList.toggle('is-on', lyricsAutoScroll);
+  button.setAttribute('aria-pressed', String(lyricsAutoScroll));
+  button.textContent = lyricsAutoScroll ? '自动滚动 开' : '自动滚动 关';
 }
 
 export function playResult(result) {
@@ -135,13 +155,16 @@ function renderSong(song) {
   const fallback = document.getElementById('album-cover');
   if (cover && fallback) {
     if (song.cover) {
+      cover.classList.remove('visible');
       cover.src = song.cover;
-      cover.classList.add('visible');
-      fallback.classList.add('hidden');
+      cover.onload = () => cover.classList.add('visible');
+      cover.onerror = () => {
+        cover.removeAttribute('src');
+        cover.classList.remove('visible');
+      };
     } else {
       cover.removeAttribute('src');
       cover.classList.remove('visible');
-      fallback.classList.remove('hidden');
     }
   }
 }
@@ -219,7 +242,9 @@ function syncLyric() {
   if (!current || current.classList.contains('active')) return;
   box.querySelectorAll('p').forEach(p => p.classList.remove('active'));
   current.classList.add('active');
-  current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (lyricsAutoScroll) {
+    current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
 }
 
 function updateProgress() {
@@ -229,6 +254,7 @@ function updateProgress() {
 
   const pct = (audio.currentTime / audio.duration) * 100;
   bar.style.width = `${pct}%`;
+  bar.parentElement?.setAttribute('aria-valuenow', String(Math.round(pct)));
   if (timeEl) timeEl.textContent = formatTime(audio.currentTime);
 }
 
@@ -253,9 +279,16 @@ function setLoadingState(isLoading, triggerButton) {
     btn.disabled = isLoading;
   }
   if (triggerButton && triggerButton !== btn) {
-    triggerButton.textContent = isLoading ? '挑歌中...' : '跳过当前';
+    triggerButton.textContent = isLoading ? '…' : getActionButtonLabel(triggerButton);
+    triggerButton.title = isLoading ? '挑歌中...' : (triggerButton.getAttribute('aria-label') || triggerButton.title);
     triggerButton.disabled = isLoading;
   }
+}
+
+function getActionButtonLabel(button) {
+  if (button.id === 'btn-next') return '›';
+  if (button.id === 'btn-prev') return '‹';
+  return button.dataset.label || button.textContent || '';
 }
 
 function updateQueueCount() {

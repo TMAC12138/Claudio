@@ -133,6 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (view === 'settings') loadSettings();
     });
   });
+  document.querySelectorAll('.dock-jump').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.dataset.view;
+      showView(view);
+      if (view === 'profile') loadProfile();
+      if (view === 'settings') loadSettings();
+    });
+  });
 
   document.getElementById('btn-play')?.addEventListener('click', () => player.togglePlay());
   document.getElementById('btn-next')?.addEventListener('click', (e) => {

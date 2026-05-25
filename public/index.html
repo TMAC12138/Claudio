@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#e94560">
   <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/css/style.css">
   <title>Claudio - AI DJ</title>
 </head>
@@ -14,71 +15,183 @@
     <!-- Player View -->
     <div id="view-player" class="view active">
       <main class="player-shell">
-        <section class="hero-copy">
-          <p class="eyebrow">Personal AI DJ Radio</p>
-          <h1>个人 AI DJ 电台</h1>
-          <p class="hero-subtitle">小月读懂你的品味，在歌曲之间陪你聊几句。</p>
-        </section>
-
-        <section class="now-card">
-          <div class="cover-frame">
-            <img id="album-cover-img" class="album-cover-img" alt="专辑封面">
-            <div id="album-cover" class="album-cover-fallback">♪</div>
-          </div>
-
-          <div class="track-panel">
-            <div class="track-kicker" id="play-status">准备播放</div>
-            <h2 class="song-title" id="song-title">等待播放...</h2>
-            <div class="song-artist" id="song-artist">你的私人 AI DJ</div>
-            <div class="song-album" id="song-album">Claudio 会根据此刻状态推荐下一首</div>
-
-            <blockquote class="dj-line" id="dj-line">周一下午，阳光正好，有点那种慵懒的感觉。来点温度。</blockquote>
-            <p class="reason-line" id="reason-line">选曲理由会显示在这里。</p>
-
-            <div class="tag-row" id="reason-tags">
-              <span>温暖</span>
-              <span>午后</span>
-              <span>平静</span>
+        <header class="player-topbar">
+          <div class="brand-lockup">
+            <div class="brand-mark" aria-hidden="true">C</div>
+            <div>
+              <p class="eyebrow">Personal AI DJ Radio</p>
+              <h1>Claudio</h1>
+              <p class="hero-subtitle">本地运行的个人 AI DJ 电台，小月读懂你的品味与此刻状态。</p>
             </div>
           </div>
-
-          <div class="progress-zone">
-            <div class="progress-wrap" id="progress-container">
-              <div class="progress-bar" id="progress-bar"></div>
-            </div>
-            <div class="time-row">
-              <span id="time-current">0:00</span>
-              <span id="time-duration">0:00</span>
-            </div>
+          <div class="status-pills" aria-label="运行状态">
+            <span class="pill live-pill"><b></b>WS 实时同步</span>
+            <span class="pill" id="weather-badge">天气加载中</span>
+            <span class="pill">本地隐私</span>
           </div>
+        </header>
 
-          <div class="player-actions">
-            <button id="btn-play" class="primary-action" title="播放/暂停">继续</button>
-            <button id="btn-next" class="secondary-action" title="跳过当前">跳过当前</button>
-            <button id="btn-prev" class="secondary-action" title="上一首">返回上一首</button>
-          </div>
-
-          <div class="mood-row" id="mood-row">
-            <button data-prompt="来点适合专注工作的音乐">专注</button>
-            <button data-prompt="来点放松一点的音乐">放松</button>
-            <button data-prompt="来点适合有点伤感的时候听的歌">伤感</button>
-            <button data-prompt="来点让我兴奋起来的音乐">兴奋</button>
-            <button data-prompt="来点适合疲惫时恢复状态的音乐">疲惫</button>
-            <button data-prompt="来点适合深夜独处的音乐">深夜独处</button>
-          </div>
-
-          <section class="lyrics-panel">
-            <div class="lyrics-header">
-              <span>歌词</span>
-              <span id="queue-count">队列 0 首</span>
+        <section class="player-grid" aria-label="播放器主界面">
+          <aside class="panel art-panel">
+            <div class="cover-frame">
+              <img id="album-cover-img" class="album-cover-img" alt="专辑封面">
+              <div id="album-cover" class="album-cover-fallback" aria-hidden="true">
+                <span class="record-ring"></span>
+                <strong>♪</strong>
+              </div>
+              <div class="cover-lyrics">
+                <div class="cover-lyrics-head">
+                  <span>歌词</span>
+                  <button id="btn-lyrics-autoscroll" class="lyrics-toggle is-on" type="button" aria-pressed="true">自动滚动 开</button>
+                </div>
+                <div id="lyrics-content" class="lyrics-content">播放歌曲后会自动加载歌词。</div>
+              </div>
             </div>
-            <div id="lyrics-content" class="lyrics-content">播放歌曲后会自动加载歌词。</div>
+
+            <div class="metric-grid">
+              <div class="metric-card"><span>今日接受率</span><b>86%</b></div>
+              <div class="metric-card"><span>离线缓存</span><b>10 首</b></div>
+              <div class="metric-card"><span>跳过率</span><b>低</b></div>
+            </div>
+
+            <div class="context-sources" aria-label="推荐上下文来源">
+              <span>taste.md</span>
+              <span>routines.md</span>
+              <span>weather</span>
+              <span>calendar</span>
+              <span>plays</span>
+              <span>chat</span>
+            </div>
+          </aside>
+
+          <section class="panel now-card">
+            <div class="section-head">
+              <span>Now Playing</span>
+              <strong id="play-status" class="live-status">准备播放</strong>
+            </div>
+
+            <div class="track-panel">
+              <h2 class="song-title" id="song-title">等待播放...</h2>
+              <div class="song-meta">
+                <span id="song-artist">你的私人 AI DJ</span>
+                <span id="song-album">Claudio 会根据此刻状态推荐下一首</span>
+                <span id="queue-count">队列 0 首</span>
+              </div>
+
+              <blockquote class="dj-line" id="dj-line">周一下午，阳光正好，有点那种慵懒的感觉。来点温度。</blockquote>
+              <p class="reason-line" id="reason-line">选曲理由会显示在这里。</p>
+
+              <div class="tag-row" id="reason-tags">
+                <span>温暖</span>
+                <span>午后</span>
+                <span>平静</span>
+              </div>
+            </div>
+
+            <div class="waveform" aria-hidden="true">
+              <i style="height:22px"></i><i style="height:38px"></i><i style="height:54px"></i><i style="height:31px"></i><i style="height:62px"></i><i style="height:44px"></i><i style="height:70px"></i><i style="height:28px"></i><i style="height:48px"></i><i style="height:35px"></i><i style="height:58px"></i><i style="height:30px"></i><i style="height:66px"></i><i style="height:46px"></i><i style="height:24px"></i><i style="height:52px"></i><i style="height:38px"></i><i style="height:68px"></i><i style="height:32px"></i><i style="height:58px"></i><i style="height:43px"></i><i style="height:26px"></i><i style="height:62px"></i><i style="height:36px"></i><i style="height:49px"></i><i style="height:71px"></i><i style="height:29px"></i><i style="height:55px"></i><i style="height:39px"></i><i style="height:64px"></i>
+            </div>
+
+            <div class="progress-zone">
+              <div class="progress-wrap" id="progress-container" role="progressbar" aria-label="播放进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="progress-bar" id="progress-bar"></div>
+              </div>
+              <div class="time-row">
+                <span id="time-current">0:00</span>
+                <span id="time-duration">0:00</span>
+              </div>
+            </div>
+
+            <div class="player-actions" aria-label="播放控制">
+              <button id="btn-prev" class="icon-action" title="上一首" aria-label="上一首">‹</button>
+              <button id="btn-play" class="primary-action" title="播放/暂停">继续</button>
+              <button id="btn-next" class="icon-action" title="跳过当前" aria-label="跳过当前">›</button>
+              <div class="volume-wrap">
+                <label for="volume">歌曲音量</label>
+                <input id="volume" type="range" min="0" max="100" value="72">
+                <span>TTS -6dB</span>
+              </div>
+            </div>
           </section>
 
-          <div class="player-chatbar">
-            <input id="player-chat-input" type="text" placeholder="跟小月说点什么...「来点安静的」「为什么放这首」" autocomplete="off">
-            <button id="player-chat-send" class="btn-send">发送</button>
-          </div>
+          <section class="bottom-panels">
+            <article class="panel ask-panel">
+              <div class="lyrics-header">
+                <span>Ask DJ</span>
+                <button id="btn-chat-toggle" class="mini-button" type="button">打开聊天</button>
+              </div>
+              <div class="player-chatbar">
+                <input id="player-chat-input" type="text" placeholder="跟小月说点什么...「来点安静的」「为什么放这首」" autocomplete="off">
+                <button id="player-chat-send" class="btn-send">发送</button>
+              </div>
+            </article>
+          </section>
+
+          <aside class="player-sidebar">
+            <section class="panel side-panel">
+              <div class="section-head">
+                <span>Up Next</span>
+                <strong>prefetch 10</strong>
+              </div>
+              <div class="queue-preview">
+                <div class="queue-item"><span class="thumb thumb-rose"></span><div><b>下一首推荐</b><small>由 Claude reason 决定</small></div><em>待解析</em></div>
+                <div class="queue-item"><span class="thumb thumb-green"></span><div><b>工作块候选</b><small>偏无歌词和器乐曲</small></div><em>NCM</em></div>
+              </div>
+            </section>
+
+            <section class="panel side-panel plan-panel">
+              <div class="section-head">
+                <span>Today Plan</span>
+                <strong>Scheduler</strong>
+              </div>
+              <div class="plan-list">
+                <div class="plan-row"><time>07:00</time><div><b>晨间唤醒</b><span>天气 + 日历生成早安播报。</span></div></div>
+                <div class="plan-row"><time>09:00</time><div><b>工作陪伴</b><span>会议块前自动降低音量。</span></div></div>
+                <div class="plan-row"><time>14:30</time><div><b>即时重排</b><span>飞书 Webhook 触发下一首。</span></div></div>
+                <div class="plan-row"><time>22:30</time><div><b>夜间收尾</b><span>降低节拍密度并总结。</span></div></div>
+              </div>
+            </section>
+
+            <section class="panel side-panel">
+              <div class="section-head">
+                <span>Devices</span>
+                <strong>UPnP</strong>
+              </div>
+              <div class="device-preview">
+                <div><b>Naim Living Room</b><span>可在设置中绑定</span></div>
+                <div><b>MacBook Speakers</b><span>当前浏览器播放</span></div>
+              </div>
+            </section>
+          </aside>
+
+          <section class="quick-dock" aria-label="快捷入口">
+            <button class="dock-card dock-jump" data-view="profile" type="button">
+              <span>Profile</span>
+              <b>音乐画像</b>
+              <small>taste.md 摘要与用户标签</small>
+            </button>
+            <button class="dock-card dock-jump" data-view="settings" type="button">
+              <span>Scheduler</span>
+              <b>节律调度</b>
+              <small>晨间、工作、夜间时段</small>
+            </button>
+            <div class="dock-card">
+              <span>Mood Prompts</span>
+              <b>快速打断</b>
+              <div class="mood-row" id="mood-row">
+                <button data-prompt="来点适合专注工作的音乐">专注</button>
+                <button data-prompt="来点放松一点的音乐">放松</button>
+                <button data-prompt="来点适合有点伤感的时候听的歌">伤感</button>
+                <button data-prompt="来点让我兴奋起来的音乐">兴奋</button>
+                <button data-prompt="来点适合深夜独处的音乐">深夜</button>
+              </div>
+            </div>
+            <div class="dock-card">
+              <span>Privacy</span>
+              <b>全部本地化</b>
+              <small>歌单、消息、API Key 均留在本机</small>
+            </div>
+          </section>
         </section>
       </main>
       <audio id="audio" preload="auto"></audio>
@@ -139,11 +252,11 @@
     </div>
 
     <!-- Bottom Nav -->
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-view="player">🎵 播放</button>
-      <button class="nav-btn" data-view="chat">💬 聊天</button>
-      <button class="nav-btn" data-view="profile">👤 品味</button>
-      <button class="nav-btn" data-view="settings">⚙️ 设置</button>
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="nav-btn active" data-view="player" aria-label="播放器"><span>♪</span><em>播放</em></button>
+      <button class="nav-btn" data-view="chat" aria-label="聊天"><span>⌕</span><em>聊天</em></button>
+      <button class="nav-btn" data-view="profile" aria-label="品味"><span>◌</span><em>品味</em></button>
+      <button class="nav-btn" data-view="settings" aria-label="设置"><span>⌘</span><em>设置</em></button>
     </nav>
   </div>
 
