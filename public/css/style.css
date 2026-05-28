@@ -321,6 +321,15 @@ input:focus-visible,
   backdrop-filter: blur(18px) saturate(1.12);
 }
 
+.cover-lyrics.has-lines {
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: none;
+  padding: 18px;
+  background: linear-gradient(150deg, rgba(12, 14, 20, 0.78), rgba(42, 30, 38, 0.54));
+}
+
 .cover-lyrics-head {
   display: flex;
   align-items: center;
@@ -688,6 +697,16 @@ input:focus-visible,
   font-size: 14px;
 }
 
+.cover-lyrics.has-lines .lyrics-content {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+  padding-right: 4px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 18px;
+  line-height: 1.62;
+}
+
 .lyrics-content p {
   margin: 0 0 8px;
   transition: color 0.18s ease, transform 0.18s ease, font-weight 0.18s ease;
@@ -695,7 +714,7 @@ input:focus-visible,
 
 .lyrics-content p.active {
   color: #fff;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 800;
   transform: translateX(4px);
 }
@@ -1254,6 +1273,12 @@ button.dock-card {
     bottom: 12px;
     max-height: 42%;
     padding: 10px;
+  }
+
+  .cover-lyrics.has-lines {
+    inset: 0;
+    max-height: none;
+    padding: 14px;
   }
 
   .cover-lyrics-head {

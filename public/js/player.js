@@ -47,6 +47,11 @@ function renderLyricsToggle() {
   button.textContent = lyricsAutoScroll ? '自动滚动 开' : '自动滚动 关';
 }
 
+function setLyricsExpanded(expanded) {
+  const box = document.getElementById('lyrics-content');
+  box?.closest('.cover-lyrics')?.classList.toggle('has-lines', expanded);
+}
+
 export function playResult(result) {
   if (result?.play?.length) {
     queue = result.play.slice(1);
@@ -192,6 +197,7 @@ async function loadLyrics(songId) {
   lyricLines = [];
   const box = document.getElementById('lyrics-content');
   if (!box) return;
+  setLyricsExpanded(false);
   if (!songId) {
     box.textContent = '这首歌暂时没有歌词信息。';
     return;
@@ -209,6 +215,7 @@ async function loadLyrics(songId) {
     box.innerHTML = lyricLines.map((line, index) =>
       `<p data-index="${index}">${escapeHtml(line.text)}</p>`
     ).join('');
+    setLyricsExpanded(true);
   } catch {
     box.textContent = '歌词加载失败。';
   }
