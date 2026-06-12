@@ -15,22 +15,6 @@
     <!-- Player View -->
     <div id="view-player" class="view active">
       <main class="player-shell">
-        <header class="player-topbar">
-          <div class="brand-lockup">
-            <div class="brand-mark" aria-hidden="true">C</div>
-            <div>
-              <p class="eyebrow">Personal AI DJ Radio</p>
-              <h1>Claudio</h1>
-              <p class="hero-subtitle">本地运行的个人 AI DJ 电台，小月按你的品味、时间和状态接歌。</p>
-            </div>
-          </div>
-          <div class="status-pills" aria-label="运行状态">
-            <span class="pill live-pill"><b></b>WS 实时同步</span>
-            <span class="pill" id="weather-badge">天气加载中</span>
-            <span class="pill">本地隐私</span>
-          </div>
-        </header>
-
         <section class="player-grid" aria-label="播放器主界面">
           <aside class="panel art-panel">
             <div class="cover-frame">
@@ -47,26 +31,14 @@
                 <div id="lyrics-content" class="lyrics-content">播放歌曲后会自动加载歌词。</div>
               </div>
             </div>
-
-            <div class="metric-grid">
-              <div class="metric-card"><span>播放次数</span><b id="metric-plays">--</b></div>
-              <div class="metric-card"><span>对话次数</span><b id="metric-messages">--</b></div>
-              <div class="metric-card"><span>跳过率</span><b id="metric-skip-rate">--</b></div>
-            </div>
-
-            <div class="context-sources" aria-label="推荐上下文来源">
-              <span>taste.md</span>
-              <span>routines.md</span>
-              <span>weather</span>
-              <span>calendar</span>
-              <span>plays</span>
-              <span>chat</span>
-            </div>
           </aside>
 
           <section class="panel now-card">
             <div class="section-head">
-              <span>Now Playing</span>
+              <div class="section-title">
+                <span>Now Playing</span>
+                <span class="weather-context" id="weather-badge">天气加载中</span>
+              </div>
               <strong id="play-status" class="live-status" aria-live="polite">准备播放</strong>
             </div>
 
@@ -191,6 +163,15 @@
               <b>全部本地化</b>
               <small>歌单、消息、API Key 均留在本机</small>
             </div>
+          </section>
+
+          <section class="panel context-sources" aria-label="推荐上下文来源">
+            <span>taste.md</span>
+            <span>routines.md</span>
+            <span>weather</span>
+            <span>calendar</span>
+            <span>plays</span>
+            <span>chat</span>
           </section>
         </section>
       </main>
