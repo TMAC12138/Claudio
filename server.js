@@ -65,10 +65,8 @@ async function addTts(result) {
 }
 
 async function attachPlayableSongs(result, source) {
-  if (!result.play?.length) return result;
-
   try {
-    const playable = await ncm.resolvePlayableSongs(result.play, 11);
+    const playable = await ncm.resolvePlayableSongs(result.play || [], 11);
     result.play = playable;
     if (playable.length) db.recordPlay(playable[0], source);
   } catch (err) {
@@ -117,6 +115,17 @@ app.get('/tts/:filename', async (req, reply) => {
   if (!existsSync(filePath)) return reply.code(404).send({ error: 'not found' });
   const contentType = req.params.filename.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
   return reply.type(contentType).send(createReadStream(filePath));
+});
+
+// Resolve the short-lived NCM URL only when a track actually starts.
+app.get('/api/audio/:id', async (req, reply) => {
+  try {
+    const resolved = await ncm.getUrl(req.params.id);
+    if (!resolved.url) return reply.code(404).send({ error: resolved.reason || 'audio unavailable' });
+    return reply.redirect(resolved.url);
+  } catch (err) {
+    return reply.code(502).send({ error: err.message });
+  }
 });
 
 // POST /api/chat — main chat endpoint
@@ -177,7 +186,21 @@ app.post('/api/chat', async (req, reply) => {
 // GET /api/now — current playback
 app.get('/api/now', async () => {
   const plays = db.getRecentPlays(1);
-  return plays[0] || { playing: false };
+  const current = plays[0];
+  if (!current) return { playing: false };
+
+  try {
+    const resolved = await ncm.getUrl(current.song_id);
+    return {
+      ...current,
+      ...resolved,
+      sourceUrl: resolved.url,
+      url: resolved.url ? `/api/audio/${encodeURIComponent(current.song_id)}` : null,
+    };
+  } catch (err) {
+    app.log.warn('Current song URL resolve error:', err.message);
+    return current;
+  }
 });
 
 // GET /api/next — next recommendation

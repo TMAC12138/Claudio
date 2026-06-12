@@ -1,5 +1,5 @@
-import * as api from './api.js?v=20260518-3';
-import { playResult, playSong } from './player.js?v=20260518-3';
+import * as api from './api.js?v=20260612-1';
+import { playResult, playSong } from './player.js?v=20260612-1';
 
 let messagesEl = null;
 let inputEl = null;
@@ -32,13 +32,8 @@ export async function sendText(text) {
     const result = await api.chat(text);
     addMessage('dj', result.say, result);
 
-    if (result.ttsUrl && ttsEnabled) {
-      playTTS(result.ttsUrl);
-    }
-
-    if (result.play?.length) {
-      playResult(result);
-    }
+    if (result.ttsUrl && ttsEnabled) await playTTS(result.ttsUrl);
+    if (result.play?.length) playResult(result);
     return result;
   } catch (err) {
     addMessage('dj', '抱歉，出了点问题，请稍后再试。');
@@ -46,16 +41,11 @@ export async function sendText(text) {
   }
 }
 
-export function handleBroadcast(data) {
+export async function handleBroadcast(data) {
   addMessage('dj', data.say, data);
 
-  if (data.ttsUrl && ttsEnabled) {
-    playTTS(data.ttsUrl);
-  }
-
-  if (data.play?.length) {
-    playResult(data);
-  }
+  if (data.ttsUrl && ttsEnabled) await playTTS(data.ttsUrl);
+  if (data.play?.length) playResult(data);
 }
 
 function addMessage(role, text, result) {
@@ -85,7 +75,11 @@ function playTTS(url) {
   if (ttsAudio) ttsAudio.pause();
   ttsAudio = new Audio(url);
   ttsAudio.volume = 0.8;
-  ttsAudio.play().catch(() => {});
+  return new Promise(resolve => {
+    ttsAudio.addEventListener('ended', resolve, { once: true });
+    ttsAudio.addEventListener('error', resolve, { once: true });
+    ttsAudio.play().catch(resolve);
+  });
 }
 
 export function setTtsEnabled(enabled) {

@@ -1,6 +1,6 @@
-import * as api from './api.js?v=20260518-3';
-import * as player from './player.js?v=20260518-3';
-import * as chat from './chat.js?v=20260518-3';
+import * as api from './api.js?v=20260612-1';
+import * as player from './player.js?v=20260612-1';
+import * as chat from './chat.js?v=20260612-1';
 
 let currentView = 'player';
 
@@ -98,7 +98,7 @@ window.castToDevice = async (deviceUrl) => {
   await fetch('/api/cast', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deviceUrl, url: song.url }),
+    body: JSON.stringify({ deviceUrl, url: song.sourceUrl || song.url }),
   });
 };
 
@@ -200,6 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         name: now.song_name,
         artist: now.artist,
         album: now.album,
+        url: now.url,
+        sourceUrl: now.sourceUrl,
       }, {
         say: '这是上次记录到的播放状态。点击继续或跳过当前，我会接着为你安排下一首。',
         reason: `来源：${now.source || 'history'}`,

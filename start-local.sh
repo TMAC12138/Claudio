@@ -94,7 +94,7 @@ start_claudio() {
   echo "Starting Claudio on port $CLAUDIO_PORT..."
   (
     cd "$ROOT_DIR"
-    nohup env NCM_BASE_URL="$NCM_BASE_URL" PORT="$CLAUDIO_PORT" npm start >"$log_file" 2>&1 &
+    nohup env NCM_BASE_URL="$NCM_BASE_URL" PORT="$CLAUDIO_PORT" node server.js >"$log_file" 2>&1 &
     echo $! >"$pid_file"
   )
 

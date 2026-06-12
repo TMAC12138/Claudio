@@ -1,4 +1,4 @@
-const CACHE_NAME = 'claudio-v6';
+const CACHE_NAME = 'claudio-v7';
 const AUDIO_CACHE = 'claudio-audio-v1';
 const STATIC_ASSETS = [
   '/',

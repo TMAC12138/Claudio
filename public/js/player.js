@@ -111,7 +111,7 @@ export function playPrevious() {
 
 export async function skipCurrent(triggerButton) {
   try {
-    const api = await import('./api.js?v=20260518-3');
+    const api = await import('./api.js?v=20260612-1');
     await api.skipCurrent();
   } catch {}
   playNextFromQueue(triggerButton);
@@ -132,7 +132,7 @@ export async function requestNextSong(triggerButton) {
   setLoadingState(true, triggerButton);
 
   try {
-    const api = await import('./api.js?v=20260518-3');
+    const api = await import('./api.js?v=20260612-1');
     const result = await api.getNext();
     playResult(result);
   } finally {
@@ -205,7 +205,7 @@ async function loadLyrics(songId) {
 
   box.textContent = '正在加载歌词...';
   try {
-    const api = await import('./api.js?v=20260518-3');
+    const api = await import('./api.js?v=20260612-1');
     const data = await api.getLyric(songId);
     lyricLines = parseLrc(data.lrc || data.tlyric || '');
     if (!lyricLines.length) {
