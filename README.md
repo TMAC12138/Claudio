@@ -12,7 +12,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台。它把 Claude CLI、网易
 - PWA 播放器：浏览器前端包含播放、聊天、品味、设置四个视图，可注册 Service Worker 和 Manifest。
 - 个人品味管理：前端可读取和编辑 `user/taste.md`、`user/routines.md`、`user/mood-rules.md`。
 - 定时广播：每天 07:00、12:00、19:00 触发推荐，并通过 WebSocket 推送到前端。
-- 语音播报：可选接入 Fish Audio，把 DJ 回复合成为 MP3 并缓存到本地。
+- 语音播报：可选接入 Xiaomi MiMo V2.5 TTS，把 DJ 回复合成为 WAV 并缓存到本地。
 - 天气感知：可选接入 OpenWeather，把城市、温度、天气描述等信息注入推荐上下文。
 - UPnP/DLNA 投放：可发现局域网 MediaRenderer 设备，并把当前音频推送到音响播放。
 - 本地服务控制：设置页提供关闭 Claudio 和本地 NCM Enhanced 服务的按钮。
@@ -26,7 +26,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台。它把 Claude CLI、网易
 | 定时任务 | node-cron |
 | AI 适配 | Claude CLI 子进程调用 |
 | 音乐接口 | 本地 NeteaseCloudMusic API / NCM Enhanced API |
-| 语音合成 | Fish Audio REST API |
+| 语音合成 | Xiaomi MiMo V2.5 TTS API |
 | 天气 | OpenWeather API |
 | 设备投放 | SSDP / UPnP / DLNA, xml2js |
 | 前端 | Vanilla HTML / CSS / JavaScript, PWA |
@@ -49,7 +49,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台。它把 Claude CLI、网易
 └──────────────┬────────────┬────────────┬──────┘
                │            │            │
         Claude CLI     Local NCM API   External APIs
-                                      Fish Audio / OpenWeather
+                                      Xiaomi MiMo / OpenWeather
 ```
 
 一次推荐的大致流程：
@@ -77,7 +77,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台。它把 Claude CLI、网易
 │   ├── ncm.js                # 网易云音乐搜索、歌词、播放链接解析
 │   ├── router.js             # 简单意图路由
 │   ├── scheduler.js          # 早/午/晚定时广播
-│   ├── tts.js                # Fish Audio TTS 与本地缓存
+│   ├── tts.js                # Xiaomi MiMo TTS 与本地缓存
 │   ├── upnp.js               # UPnP/DLNA 设备发现与投放
 │   └── weather.js            # OpenWeather 查询与缓存
 ├── prompts/
@@ -104,7 +104,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台。它把 Claude CLI、网易
 运行后会生成一些本地状态文件，默认不提交到 Git：
 
 - `state.db`、`state.db-shm`、`state.db-wal`：SQLite 数据库和 WAL 文件。
-- `cache/tts/`：Fish Audio 合成后的 MP3 缓存。
+- `cache/tts/`：Xiaomi MiMo 合成后的 WAV 缓存。
 - `.claudio-run/`：一键启动脚本产生的 PID 和日志。
 - `ncm-api/`、`ncm-enhanced-api/`：本地音乐接口服务目录。
 - `.env`：本地密钥和配置。
@@ -120,7 +120,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台。它把 Claude CLI、网易
 
 可选：
 
-- Fish Audio API Key：用于语音播报。
+- Xiaomi MiMo API Key：用于语音播报。
 - OpenWeather API Key：用于天气上下文。
 - 局域网内支持 UPnP/DLNA 的播放设备：用于音响投放。
 - macOS：可使用 `start-local.command` 双击启动。
@@ -154,9 +154,12 @@ CLAUDE_PATH=claude
 NCM_BASE_URL=http://localhost:3001
 NCM_LEVEL=standard
 
-# Fish Audio TTS
-FISH_API_KEY=
-FISH_VOICE_ID=
+# Xiaomi MiMo V2.5 TTS
+MIMO_API_KEY=
+MIMO_BASE_URL=https://api.xiaomimimo.com/v1
+MIMO_TTS_MODEL=mimo-v2.5-tts
+MIMO_TTS_VOICE=茉莉
+MIMO_TTS_STYLE=温暖自然的中文私人电台女声，语速适中，表达松弛而有陪伴感。
 
 # OpenWeather
 WEATHER_API_KEY=
@@ -174,8 +177,11 @@ FEISHU_APP_SECRET=
 | `CLAUDE_PATH` | 是 | Claude CLI 可执行文件路径，默认使用 PATH 中的 `claude`。 |
 | `NCM_BASE_URL` | 是 | 本地网易云音乐 API 地址，默认 `http://localhost:3001`。 |
 | `NCM_LEVEL` | 否 | `/song/url/v1` 使用的音质等级，默认 `standard`。 |
-| `FISH_API_KEY` | 否 | Fish Audio API Key；为空时不生成语音，接口仍可正常返回文字和歌曲。 |
-| `FISH_VOICE_ID` | 否 | Fish Audio 语音 ID。 |
+| `MIMO_API_KEY` | 否 | Xiaomi MiMo API Key；为空时不生成语音，接口仍可正常返回文字和歌曲。 |
+| `MIMO_BASE_URL` | 否 | MiMo API 地址，默认 `https://api.xiaomimimo.com/v1`。 |
+| `MIMO_TTS_MODEL` | 否 | TTS 模型，默认 `mimo-v2.5-tts`。 |
+| `MIMO_TTS_VOICE` | 否 | 预置音色，默认中文女声 `茉莉`。 |
+| `MIMO_TTS_STYLE` | 否 | 通过自然语言控制语气、语速和播报风格。 |
 | `WEATHER_API_KEY` | 否 | OpenWeather API Key；为空时天气接口返回未配置提示。 |
 | `WEATHER_CITY` | 否 | 天气查询城市，默认 `Beijing`。 |
 | `PORT` | 否 | Claudio 服务端口，代码默认 `3000`；可在 `.env` 中手动添加。 |
@@ -320,7 +326,7 @@ Claudio 的个性化主要来自 `user/` 目录：
   ],
   "reason": "evening_relax",
   "segue": "",
-  "ttsUrl": "/tts/xxx.mp3"
+  "ttsUrl": "/tts/xxx.wav"
 }
 ```
 
@@ -476,7 +482,7 @@ Claudio 的个性化主要来自 `user/` 目录：
 }
 ```
 
-`play` 可以是歌曲对象数组，也可以是一个字符串；代码会把字符串转成单首候选歌曲。随后 `lib/ncm.js` 会按歌曲名和歌手搜索并补充可播放 URL。
+`play` 应包含 11 首歌曲：第一首立即播放，其余 10 首进入待播队列。`lib/ncm.js` 会解析可播放 URL，并在候选不足时通过相关搜索结果和已导入的网易云收藏补足。
 
 ## 常见问题
 
@@ -500,7 +506,7 @@ claude --version
 
 ### 没有语音播报
 
-`FISH_API_KEY` 为空时是正常情况，Claudio 会跳过语音合成。配置 Key 后，合成文件会缓存到 `cache/tts/`，相同文本不会重复请求。
+`MIMO_API_KEY` 为空时，Claudio 会跳过语音合成。配置 Key 后，MiMo 会生成 WAV 文件并缓存到 `cache/tts/`；缓存键包含文本、模型、音色和播报风格。
 
 ### 天气显示未配置
 

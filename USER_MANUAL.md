@@ -28,7 +28,7 @@ Claudio（Claude + Radio）是一个本地运行的私人 AI DJ 电台。它结�
 - **AI 智能推荐** — 基于 Claude AI，理解你的自然语言描述，推荐最合适的音乐
 - **品味学习** — 通过配置品味文件，让 DJ 越来越懂你
 - **定时广播** — 早晨、中午、晚上自动推送音乐推荐
-- **语音播报** — Fish Audio TTS 语音合成，DJ 会用声音和你打招呼
+- **语音播报** — Xiaomi MiMo V2.5 TTS 语音合成，DJ 会用声音和你打招呼
 - **天气感知** — 根据天气状况调整推荐风格
 - **设备投屏** — 支持 UPnP/DLNA 协议，推送到智能音箱
 - **PWA 支持** — 可安装到手机桌面，像原生 App 一样使用
@@ -47,7 +47,7 @@ Claudio（Claude + Radio）是一个本地运行的私人 AI DJ 电台。它结�
 
 | 服务 | 用途 | 是否必须 |
 |------|------|----------|
-| Fish Audio API | 语音播报 | 否，无则静默 |
+| Xiaomi MiMo API | 语音播报 | 否，无则静默 |
 | OpenWeather API | 天气感知 | 否，无则忽略天气 |
 | UPnP 音箱 | 音乐投屏 | 否，无则本地播放 |
 
@@ -150,9 +150,12 @@ CLAUDE_PATH=claude
 # 网易云音乐 API 地址
 NCM_BASE_URL=http://localhost:3001
 
-# Fish Audio TTS（语音播报）
-FISH_API_KEY=你的API密钥
-FISH_VOICE_ID=你的语音ID
+# Xiaomi MiMo V2.5 TTS（语音播报）
+MIMO_API_KEY=你的API密钥
+MIMO_BASE_URL=https://api.xiaomimimo.com/v1
+MIMO_TTS_MODEL=mimo-v2.5-tts
+MIMO_TTS_VOICE=茉莉
+MIMO_TTS_STYLE=温暖自然的中文私人电台女声，语速适中，表达松弛而有陪伴感。
 
 # OpenWeather（天气感知）
 WEATHER_API_KEY=你的API密钥
@@ -164,12 +167,12 @@ PORT=3000
 
 ### 4.2 获取 API Key
 
-#### Fish Audio TTS（语音播报）
+#### Xiaomi MiMo TTS（语音播报）
 
-1. 访问 https://fish.audio
+1. 访问 https://platform.xiaomimimo.com
 2. 注册账号并登录
 3. 进入控制台获取 API Key
-4. 在语音市场选择喜欢的音色，获取 Voice ID
+4. 将 API Key 写入 `MIMO_API_KEY`
 
 #### OpenWeather（天气感知）
 
@@ -268,7 +271,7 @@ Claudio 内置定时广播功能，会在以下时间自动推送音乐推荐：
 
 ### 6.5 语音播报
 
-配置 Fish Audio TTS 后，DJ 的每句话都会被合成为语音：
+配置 Xiaomi MiMo TTS 后，DJ 的每句话都会被合成为语音：
 
 - 聊天回复时自动播放语音
 - 定时广播时包含语音播报
@@ -395,7 +398,7 @@ nano user/mood-rules.md
     }
   ],
   "reason": "用户点播",
-  "ttsUrl": "/tts/abc123.mp3"
+  "ttsUrl": "/tts/abc123.wav"
 }
 ```
 
@@ -612,14 +615,15 @@ WEATHER_CITY=你的城市
 
 ### Q: 语音播报没有声音？
 
-**A:** 检查 Fish Audio 配置：
+**A:** 检查 Xiaomi MiMo 配置：
 
 ```bash
-FISH_API_KEY=你的Key
-FISH_VOICE_ID=你的音色ID
+MIMO_API_KEY=你的Key
+MIMO_TTS_MODEL=mimo-v2.5-tts
+MIMO_TTS_VOICE=茉莉
 ```
 
-可以在 https://fish.audio 试听不同音色并获取 ID。
+可通过 `MIMO_TTS_STYLE` 调整语速、情绪和电台播报风格。
 
 ### Q: 如何修改定时广播时间？
 
@@ -676,7 +680,7 @@ npm start
                    │
 ┌──────────────────▼──────────────────────────┐
 │  External Services                          │
-│  Claude CLI │ NCM API │ Fish Audio │ Weather│
+│  Claude CLI │ NCM API │ Xiaomi MiMo│ Weather│
 └─────────────────────────────────────────────┘
 ```
 
@@ -688,7 +692,7 @@ npm start
 | 上下文 | `lib/context.js` | 组装 6 片段 Prompt 发送给 AI |
 | Claude | `lib/claude.js` | 调用 Claude CLI，解析 JSON 响应 |
 | NCM | `lib/ncm.js` | 网易云音乐 API 封装，含 URL 缓存 |
-| TTS | `lib/tts.js` | Fish Audio 语音合成，含文件缓存 |
+| TTS | `lib/tts.js` | Xiaomi MiMo V2.5 语音合成，含文件缓存 |
 | 调度 | `lib/scheduler.js` | 定时广播（早/午/晚） |
 | UPnP | `lib/upnp.js` | 设备发现与音频推送 |
 | 天气 | `lib/weather.js` | OpenWeather API，5 分钟缓存 |
@@ -722,7 +726,7 @@ npm start
 | 资源 | 缓存方式 | 过期时间 |
 |------|----------|----------|
 | NCM 歌曲 URL | 内存 Map | 9 分钟 |
-| TTS 音频 | 文件 (MD5 命名) | 永久 |
+| TTS 音频 | 文件（SHA-256 命名） | 永久 |
 | 天气数据 | 内存变量 | 5 分钟 |
 | UPnP 设备 | 内存数组 | 60 秒 |
 

@@ -25,7 +25,13 @@ const execFileAsync = promisify(execFile);
 // Configure modules
 ncm.configure({ baseUrl: process.env.NCM_BASE_URL, level: process.env.NCM_LEVEL });
 claude.configure({ path: process.env.CLAUDE_PATH || 'claude' });
-tts.configure({ apiKey: process.env.FISH_API_KEY, voiceId: process.env.FISH_VOICE_ID });
+tts.configure({
+  apiKey: process.env.MIMO_API_KEY,
+  baseUrl: process.env.MIMO_BASE_URL,
+  model: process.env.MIMO_TTS_MODEL,
+  voice: process.env.MIMO_TTS_VOICE,
+  style: process.env.MIMO_TTS_STYLE,
+});
 weather.configure({ apiKey: process.env.WEATHER_API_KEY, city: process.env.WEATHER_CITY });
 
 // Initialize
@@ -62,7 +68,7 @@ async function attachPlayableSongs(result, source) {
   if (!result.play?.length) return result;
 
   try {
-    const playable = await ncm.resolvePlayableSongs(result.play, 3);
+    const playable = await ncm.resolvePlayableSongs(result.play, 11);
     result.play = playable;
     if (playable.length) db.recordPlay(playable[0], source);
   } catch (err) {
@@ -109,7 +115,8 @@ async function stopListeningPort(port) {
 app.get('/tts/:filename', async (req, reply) => {
   const filePath = join(__dirname, 'cache', 'tts', req.params.filename);
   if (!existsSync(filePath)) return reply.code(404).send({ error: 'not found' });
-  return reply.type('audio/mpeg').send(createReadStream(filePath));
+  const contentType = req.params.filename.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
+  return reply.type(contentType).send(createReadStream(filePath));
 });
 
 // POST /api/chat — main chat endpoint
@@ -123,13 +130,13 @@ app.post('/api/chat', async (req, reply) => {
 
   if (result.type === 'play_direct') {
     try {
-      const songs = await ncm.search(result.data.keyword);
+      const songs = await ncm.search(result.data.keyword, 20);
       if (!songs.length) {
         const resp = { say: `没有找到 "${result.data.keyword}" 相关的歌曲`, play: [], reason: 'no_results' };
         db.saveMessage('assistant', resp.say);
         return addTts(resp);
       }
-      const enriched = await ncm.resolvePlayableSongs(songs, 3);
+      const enriched = await ncm.resolvePlayableSongs(songs, 11);
       if (!enriched.length) {
         const resp = { say: `找到了 "${result.data.keyword}"，但暂时没有可播放的音频链接`, play: [], reason: 'no_playable_url' };
         db.saveMessage('assistant', resp.say);
