@@ -8,4 +8,5 @@ cache/
 ncm-api/
 ncm-enhanced-api/
 .claudio-run/
+.worktrees/
 user/netease-playlists.json
