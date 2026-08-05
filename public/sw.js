@@ -76,7 +76,7 @@ self.addEventListener('fetch', (e) => {
       const clone = res.clone();
       caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
       return res;
-    }).catch(() => caches.match(e.request))
+    }).catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
 });
 

@@ -239,6 +239,18 @@
       <button class="nav-btn" data-view="profile" aria-label="品味"><span>◌</span><em>品味</em></button>
       <button class="nav-btn" data-view="settings" aria-label="设置"><span>⌘</span><em>设置</em></button>
     </nav>
+
+    <!-- Modal for Edit Profile -->
+    <dialog id="edit-modal" class="modal-shell">
+      <div class="modal-card">
+        <h3 id="modal-title">编辑</h3>
+        <textarea id="modal-textarea" rows="12" placeholder="内容..."></textarea>
+        <div class="modal-actions">
+          <button id="btn-modal-cancel" type="button" class="mini-button">取消</button>
+          <button id="btn-modal-save" type="button" class="btn-send">保存修改</button>
+        </div>
+      </div>
+    </dialog>
   </div>
 
   <script type="module" src="/js/app.js?v=20260612-1"></script>

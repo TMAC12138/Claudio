@@ -1,3 +1,5 @@
+import * as api from './api.js?v=20260612-1';
+
 let audio = null;
 let currentSong = null;
 let currentMeta = null;
@@ -111,7 +113,6 @@ export function playPrevious() {
 
 export async function skipCurrent(triggerButton) {
   try {
-    const api = await import('./api.js?v=20260612-1');
     await api.skipCurrent();
   } catch {}
   playNextFromQueue(triggerButton);
@@ -132,7 +133,6 @@ export async function requestNextSong(triggerButton) {
   setLoadingState(true, triggerButton);
 
   try {
-    const api = await import('./api.js?v=20260612-1');
     const result = await api.getNext();
     playResult(result);
   } finally {
@@ -205,15 +205,14 @@ async function loadLyrics(songId) {
 
   box.textContent = '正在加载歌词...';
   try {
-    const api = await import('./api.js?v=20260612-1');
     const data = await api.getLyric(songId);
-    lyricLines = parseLrc(data.lrc || data.tlyric || '');
+    lyricLines = parseLrc(data.lrc || '', data.tlyric || '');
     if (!lyricLines.length) {
       box.textContent = '这首歌暂时没有歌词信息。';
       return;
     }
     box.innerHTML = lyricLines.map((line, index) =>
-      `<p data-index="${index}">${escapeHtml(line.text)}</p>`
+      `<p data-index="${index}">${escapeHtml(line.text)}${line.translation ? `<span class="tlyric">${escapeHtml(line.translation)}</span>` : ''}</p>`
     ).join('');
     setLyricsExpanded(true);
   } catch {
@@ -221,7 +220,22 @@ async function loadLyrics(songId) {
   }
 }
 
-function parseLrc(lrc) {
+function parseLrc(lrc, tlyric) {
+  const transMap = new Map();
+  if (tlyric) {
+    tlyric.split('\n').forEach(line => {
+      const match = line.match(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/);
+      if (match) {
+        const min = Number(match[1]);
+        const sec = Number(match[2]);
+        const frac = Number((match[3] || '0').padEnd(3, '0'));
+        const timeKey = Math.floor((min * 60 + sec + frac / 1000) * 10) / 10;
+        const text = match[4].trim();
+        if (text) transMap.set(timeKey, text);
+      }
+    });
+  }
+
   return lrc.split('\n')
     .map(line => {
       const match = line.match(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/);
@@ -229,9 +243,11 @@ function parseLrc(lrc) {
       const minutes = Number(match[1]);
       const seconds = Number(match[2]);
       const fraction = Number((match[3] || '0').padEnd(3, '0'));
+      const time = minutes * 60 + seconds + fraction / 1000;
+      const timeKey = Math.floor(time * 10) / 10;
       const text = match[4].trim();
       if (!text) return null;
-      return { time: minutes * 60 + seconds + fraction / 1000, text };
+      return { time, text, translation: transMap.get(timeKey) || '' };
     })
     .filter(Boolean);
 }

@@ -26,21 +26,57 @@ async function loadProfile() {
   } catch {}
 }
 
-window.editTaste = async (file) => {
+window.editTaste = (file) => {
   const el = file === 'taste.md' ? 'taste-content'
     : file === 'routines.md' ? 'routines-content'
     : 'mood-content';
   const current = document.getElementById(el)?.textContent || '';
-  const newContent = prompt(`编辑 ${file}:`, current);
-  if (newContent === null) return;
 
-  await fetch('/api/taste', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ file, content: newContent }),
-  });
-  loadProfile();
+  const dialog = document.getElementById('edit-modal');
+  const title = document.getElementById('modal-title');
+  const textarea = document.getElementById('modal-textarea');
+  const btnCancel = document.getElementById('btn-modal-cancel');
+  const btnSave = document.getElementById('btn-modal-save');
+
+  if (!dialog || !textarea) return;
+
+  title.textContent = `编辑 ${file}`;
+  textarea.value = current;
+
+  const cleanup = () => {
+    btnCancel.onclick = null;
+    btnSave.onclick = null;
+    dialog.close();
+  };
+
+  btnCancel.onclick = () => cleanup();
+  btnSave.onclick = async () => {
+    const newContent = textarea.value;
+    try {
+      await fetch('/api/taste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file, content: newContent }),
+      });
+      cleanup();
+      loadProfile();
+    } catch (err) {
+      alert(`保存失败: ${err.message}`);
+    }
+  };
+
+  dialog.showModal();
 };
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
 
 async function loadSettings() {
   try {
@@ -52,7 +88,7 @@ async function loadSettings() {
     const schedEl = document.getElementById('scheduler-status');
     if (schedEl) {
       schedEl.innerHTML = scheduler.slots.map(s =>
-        `<div class="setting-row"><span>${s}</span><span class="badge">✓</span></div>`
+        `<div class="setting-row"><span>${escapeHtml(s)}</span><span class="badge">✓</span></div>`
       ).join('');
     }
 
@@ -62,7 +98,7 @@ async function loadSettings() {
         devEl.innerHTML = '<div class="setting-row">未发现设备</div>';
       } else {
         devEl.innerHTML = devices.devices.map(d =>
-          `<div class="setting-row"><span>${d.name}</span><button class="btn-small" onclick="castToDevice('${d.location}')">推送</button></div>`
+          `<div class="setting-row"><span>${escapeHtml(d.name)}</span><button class="btn-small" onclick="castToDevice('${escapeHtml(d.location)}')">推送</button></div>`
         ).join('');
       }
     }

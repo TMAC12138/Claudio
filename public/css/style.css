@@ -1257,3 +1257,59 @@ button.dock-card {
     font-size: 10px;
   }
 }
+
+.modal-shell {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 90vw;
+  width: 500px;
+}
+
+.modal-shell::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--line, #e0e0e0);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--fg-main, #333);
+}
+
+.modal-card textarea {
+  width: 100%;
+  border: 1px solid var(--line, #ccc);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  box-sizing: border-box;
+  background: var(--bg-input, #fafafa);
+  color: var(--fg-main, #222);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.lyrics-content p span.tlyric {
+  display: block;
+  font-size: 0.85em;
+  opacity: 0.75;
+  margin-top: 2px;
+}

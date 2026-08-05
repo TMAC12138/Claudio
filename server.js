@@ -3,7 +3,7 @@ import fastifyWebsocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import dotenv from 'dotenv';
 import { execFile } from 'child_process';
-import { createReadStream, existsSync } from 'fs';
+import { createReadStream, existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
@@ -156,7 +156,7 @@ app.post('/api/chat', async (req, reply) => {
       return addTts({ say: `好的，为你播放 ${enriched[0].name}`, play: enriched, reason: 'user_request' });
     } catch (err) {
       app.log.error(err);
-      return { say: '音乐服务暂时不可用，请稍后再试', play: [], reason: 'ncm_error' };
+      return addTts({ say: '音乐服务暂时不可用，请稍后再试', play: [], reason: 'ncm_error' });
     }
   }
 
@@ -230,7 +230,6 @@ app.post('/api/play/skip-current', async () => {
 
 // GET /api/taste — user taste profile
 app.get('/api/taste', async () => {
-  const { readFileSync } = await import('fs');
   const files = ['taste.md', 'routines.md', 'mood-rules.md'];
   const taste = {};
   for (const f of files) {
@@ -300,7 +299,6 @@ app.post('/api/taste', async (req, reply) => {
   if (content.length > 5000) return reply.code(400).send({ error: 'content too long (max 5000 chars)' });
   const allowed = ['taste.md', 'routines.md', 'mood-rules.md'];
   if (!allowed.includes(file)) return reply.code(400).send({ error: 'invalid file name' });
-  const { writeFileSync } = await import('fs');
   writeFileSync(join(__dirname, 'user', file), content, 'utf-8');
   return { ok: true };
 });
@@ -326,6 +324,8 @@ app.get('/api/scheduler', async () => scheduler.getStatus());
 
 // POST /api/system/stop-ncm — stop local NCM Enhanced service
 app.post('/api/system/stop-ncm', async (req, reply) => {
+  const localIps = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost']);
+  if (!localIps.has(req.ip)) return reply.code(403).send({ error: 'Forbidden' });
   try {
     return await stopListeningPort(getLocalNcmPort());
   } catch (err) {
@@ -334,7 +334,9 @@ app.post('/api/system/stop-ncm', async (req, reply) => {
 });
 
 // POST /api/system/stop-claudio — stop this local Claudio service
-app.post('/api/system/stop-claudio', async () => {
+app.post('/api/system/stop-claudio', async (req, reply) => {
+  const localIps = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost']);
+  if (!localIps.has(req.ip)) return reply.code(403).send({ error: 'Forbidden' });
   setTimeout(async () => {
     try {
       scheduler.stop();
