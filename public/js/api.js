@@ -26,6 +26,10 @@ export async function getNext() {
   return fetchJson(`${API_BASE}/api/next`);
 }
 
+export async function refreshQueue() {
+  return fetchJson(`${API_BASE}/api/queue/refresh`, { method: 'POST' });
+}
+
 export async function getLyric(id) {
   return fetchJson(`${API_BASE}/api/lyric/${encodeURIComponent(id)}`);
 }
@@ -36,6 +40,26 @@ export async function skipCurrent() {
 
 export async function getTaste() {
   return fetchJson(`${API_BASE}/api/taste`);
+}
+
+export async function getFavorite(song) {
+  const query = new URLSearchParams({
+    name: song.name || song.song_name || '',
+    artist: song.artist || '',
+  });
+  return fetchJson(`${API_BASE}/api/taste/favorite?${query}`);
+}
+
+export async function setFavorite(song, liked) {
+  return fetchJson(`${API_BASE}/api/taste/favorite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: song.name || song.song_name,
+      artist: song.artist,
+      liked,
+    }),
+  });
 }
 
 export async function getScheduler() {
