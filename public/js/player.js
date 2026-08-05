@@ -10,6 +10,9 @@ let pendingQueueMeta = null;
 let history = [];
 let lyricLines = [];
 let lyricsAutoScroll = true;
+let favoriteLiked = false;
+let favoriteBusy = false;
+let favoriteRequestToken = 0;
 
 export function init(audioElement) {
   audio = audioElement;
@@ -88,6 +91,7 @@ export function playSong(song, meta = currentMeta) {
   renderSong(song);
   updateRecommendationText(currentMeta);
   loadLyrics(song.id || song.song_id);
+  syncFavoriteState(song);
 }
 
 export function togglePlay() {
@@ -170,6 +174,71 @@ export async function refreshQueue(triggerButton) {
       triggerButton.disabled = false;
     }
   }
+}
+
+export async function toggleFavorite() {
+  if (!currentSong || favoriteBusy) return;
+  const song = currentSong;
+  const key = favoriteSongKey(song);
+  const previous = favoriteLiked;
+  const token = ++favoriteRequestToken;
+  favoriteBusy = true;
+  setText('favorite-status', '');
+  renderFavoriteButton();
+
+  try {
+    const result = await api.setFavorite(song, !previous);
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    favoriteLiked = Boolean(result.liked);
+    setText('favorite-status', favoriteLiked ? '已加入我的音乐品味' : '已从我的音乐品味移除');
+  } catch (error) {
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    favoriteLiked = previous;
+    setText('favorite-status', `更新失败：${error.message}`);
+  } finally {
+    if (token === favoriteRequestToken && key === favoriteSongKey(currentSong)) {
+      favoriteBusy = false;
+      renderFavoriteButton();
+    }
+  }
+}
+
+async function syncFavoriteState(song) {
+  const key = favoriteSongKey(song);
+  const token = ++favoriteRequestToken;
+  favoriteLiked = false;
+  favoriteBusy = true;
+  setText('favorite-status', '');
+  renderFavoriteButton();
+
+  try {
+    const result = await api.getFavorite(song);
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    favoriteLiked = Boolean(result.liked);
+  } catch (error) {
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    setText('favorite-status', `状态读取失败：${error.message}`);
+  } finally {
+    if (token === favoriteRequestToken && key === favoriteSongKey(currentSong)) {
+      favoriteBusy = false;
+      renderFavoriteButton();
+    }
+  }
+}
+
+function favoriteSongKey(song) {
+  if (!song) return '';
+  return `${song.name || song.song_name || ''}\u0000${song.artist || ''}`;
+}
+
+function renderFavoriteButton() {
+  const button = document.getElementById('btn-favorite');
+  if (!button) return;
+  button.textContent = favoriteLiked ? '♥' : '♡';
+  button.setAttribute('aria-pressed', String(favoriteLiked));
+  button.setAttribute('aria-label', favoriteLiked ? '取消喜欢这首歌' : '喜欢这首歌');
+  button.title = favoriteLiked ? '取消喜欢' : '添加到我的音乐品味';
+  button.disabled = !currentSong || favoriteBusy;
 }
 
 function playNextFromQueue(triggerButton) {

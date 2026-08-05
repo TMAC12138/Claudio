@@ -43,7 +43,11 @@
             </div>
 
             <div class="track-panel">
-              <h2 class="song-title" id="song-title">等待播放...</h2>
+              <div class="song-title-row">
+                <h2 class="song-title" id="song-title">等待播放...</h2>
+                <button id="btn-favorite" class="favorite-button" type="button" aria-label="喜欢这首歌" aria-pressed="false" disabled>♡</button>
+              </div>
+              <small id="favorite-status" class="interaction-status" aria-live="polite"></small>
               <div class="song-meta">
                 <span id="song-artist">你的私人 AI DJ</span>
                 <span id="song-album">Claudio 会根据此刻状态推荐下一首</span>

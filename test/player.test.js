@@ -33,6 +33,12 @@ function jsonResponse(body, { ok = true, status = 200 } = {}) {
   return { ok, status, json: async () => body };
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
+
 test('refreshes the pending queue without changing the current song and retains it on failure', async () => {
   const elements = installDom([
     'song-title',
@@ -70,4 +76,59 @@ test('refreshes the pending queue without changing the current song and retains 
   assert.equal(elements.get('queue-count').textContent, '队列 2 首');
   assert.equal(elements.get('queue-preview').innerHTML, previousPreview);
   assert.match(elements.get('queue-refresh-status').textContent, /刷新失败：服务不可用/);
+});
+
+test('toggles the current favorite and ignores stale responses from the previous song', async () => {
+  const elements = installDom([
+    'song-title',
+    'song-artist',
+    'song-album',
+    'btn-favorite',
+    'favorite-status',
+  ]);
+  const favoriteButton = elements.get('btn-favorite');
+  const songA = { id: 'a', name: '歌曲 A', artist: '歌手 A' };
+  const songB = { id: 'b', name: '歌曲 B', artist: '歌手 B' };
+  const songAPost = deferred();
+  const songBGet = deferred();
+  let songBPostMode = 'success';
+
+  global.fetch = async (url, options = {}) => {
+    if (options.method === 'POST') {
+      const body = JSON.parse(options.body);
+      if (body.name === songA.name) return songAPost.promise;
+      if (songBPostMode === 'failure') {
+        return jsonResponse({ error: '磁盘不可写' }, { ok: false, status: 500 });
+      }
+      return jsonResponse({ ok: true, liked: body.liked });
+    }
+
+    const requestUrl = new URL(String(url), 'http://localhost');
+    if (requestUrl.searchParams.get('name') === songB.name) return songBGet.promise;
+    return jsonResponse({ liked: false });
+  };
+
+  player.playSong(songA);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(favoriteButton.getAttribute('aria-pressed'), 'false');
+
+  const oldToggle = player.toggleFavorite();
+  player.playSong(songB);
+  songAPost.resolve(jsonResponse({ ok: true, liked: true }));
+  await oldToggle;
+
+  assert.equal(player.getCurrentSong(), songB);
+  assert.notEqual(favoriteButton.getAttribute('aria-pressed'), 'true');
+
+  songBGet.resolve(jsonResponse({ liked: false }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(favoriteButton.getAttribute('aria-pressed'), 'false');
+
+  await player.toggleFavorite();
+  assert.equal(favoriteButton.getAttribute('aria-pressed'), 'true');
+
+  songBPostMode = 'failure';
+  await player.toggleFavorite();
+  assert.equal(favoriteButton.getAttribute('aria-pressed'), 'true');
+  assert.match(elements.get('favorite-status').textContent, /更新失败：磁盘不可写/);
 });
