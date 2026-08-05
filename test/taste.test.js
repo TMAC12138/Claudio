@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isFavorite, normalizeFavorite, setFavorite } from '../lib/taste.js';
+import { mkdtempSync, readFileSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import {
+  isFavorite,
+  normalizeFavorite,
+  readFavoriteFile,
+  setFavorite,
+  updateFavoriteFile,
+} from '../lib/taste.js';
 
 test('adds a controlled favorite section without rewriting existing prose', () => {
   const original = '# taste\n比较偏向于流行曲风';
@@ -41,4 +50,15 @@ test('normalizes line breaks and preserves non-ASCII Markdown punctuation', () =
 test('uses 未知歌手 and rejects a missing song name', () => {
   assert.deepEqual(normalizeFavorite({ name: '夜曲', artist: '' }), { name: '夜曲', artist: '未知歌手' });
   assert.throws(() => normalizeFavorite({ name: '  ' }), /歌曲名不能为空/);
+});
+
+test('atomically persists and removes a favorite in a real file', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'claudio-taste-'));
+  const file = join(dir, 'taste.md');
+  writeFileSync(file, '# taste\n原始内容\n', 'utf8');
+
+  assert.equal(updateFavoriteFile(file, { name: '晴天', artist: '周杰伦' }, true), true);
+  assert.equal(readFavoriteFile(file, { name: '晴天', artist: '周杰伦' }), true);
+  assert.equal(updateFavoriteFile(file, { name: '晴天', artist: '周杰伦' }, false), false);
+  assert.equal(readFileSync(file, 'utf8').includes('原始内容'), true);
 });

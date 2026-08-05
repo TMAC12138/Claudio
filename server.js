@@ -16,11 +16,14 @@ import * as tts from './lib/tts.js';
 import * as upnp from './lib/upnp.js';
 import * as scheduler from './lib/scheduler.js';
 import * as weather from './lib/weather.js';
+import { attachPlayableSongs } from './lib/recommendation.js';
+import { readFavoriteFile, updateFavoriteFile } from './lib/taste.js';
 
 dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const execFileAsync = promisify(execFile);
+const tasteFilePath = join(__dirname, 'user', 'taste.md');
 
 // Configure modules
 ncm.configure({ baseUrl: process.env.NCM_BASE_URL, level: process.env.NCM_LEVEL });
@@ -61,19 +64,6 @@ async function addTts(result) {
     result.ttsUrl = ttsResult.url;
     if (ttsResult.error) app.log.warn('TTS error:', ttsResult.error);
   }
-  return result;
-}
-
-async function attachPlayableSongs(result, source) {
-  try {
-    const playable = await ncm.resolvePlayableSongs(result.play || [], 11);
-    result.play = playable;
-    if (playable.length) db.recordPlay(playable[0], source);
-  } catch (err) {
-    app.log.warn('Music URL resolve error:', err.message);
-    result.play = [];
-  }
-
   return result;
 }
 
@@ -163,7 +153,7 @@ app.post('/api/chat', async (req, reply) => {
   if (result.type === 'next') {
     const prompt = await context.assemble({ input: '请推荐下一首歌，用JSON格式回复', db });
     const aiResult = await claude.ask(prompt);
-    await attachPlayableSongs(aiResult, 'chat');
+    await attachPlayableSongs(aiResult, 'chat', { ncm, db, logger: app.log });
     db.saveMessage('assistant', aiResult.say);
     return addTts(aiResult);
   }
@@ -179,7 +169,7 @@ app.post('/api/chat', async (req, reply) => {
   const prompt = await context.assemble({ input: result.data.input, db });
   const aiResult = await claude.ask(prompt);
   db.saveMessage('assistant', aiResult.say);
-  await attachPlayableSongs(aiResult, 'chat');
+  await attachPlayableSongs(aiResult, 'chat', { ncm, db, logger: app.log });
   return addTts(aiResult);
 });
 
@@ -207,8 +197,17 @@ app.get('/api/now', async () => {
 app.get('/api/next', async () => {
   const prompt = await context.assemble({ input: '推荐下一首歌', db });
   const result = await claude.ask(prompt);
-  await attachPlayableSongs(result, 'next');
+  await attachPlayableSongs(result, 'next', { ncm, db, logger: app.log });
   return addTts(result);
+});
+
+// POST /api/queue/refresh — replace the pending queue without recording a play
+app.post('/api/queue/refresh', async (req, reply) => {
+  const prompt = await context.assemble({ input: '重新推荐下一批待播歌曲，不要改变当前歌曲', db });
+  const result = await claude.ask(prompt);
+  await attachPlayableSongs(result, 'queue-refresh', { ncm, db, logger: app.log }, { record: false });
+  if (!result.play.length) return reply.code(502).send({ error: '没有可播放的推荐歌曲' });
+  return result;
 });
 
 // GET /api/lyric/:id — lyrics for the player view
@@ -237,6 +236,27 @@ app.get('/api/taste', async () => {
     taste[f.replace('.md', '')] = existsSync(p) ? readFileSync(p, 'utf-8') : '';
   }
   return taste;
+});
+
+// GET /api/taste/favorite — check whether a song is in the controlled favorites section
+app.get('/api/taste/favorite', async (req, reply) => {
+  try {
+    const { name, artist } = req.query || {};
+    return { liked: readFavoriteFile(tasteFilePath, { name, artist }) };
+  } catch (error) {
+    return reply.code(400).send({ error: error.message });
+  }
+});
+
+// POST /api/taste/favorite — add or remove a controlled favorite entry
+app.post('/api/taste/favorite', async (req, reply) => {
+  try {
+    const { name, artist, liked } = req.body || {};
+    if (typeof liked !== 'boolean') return reply.code(400).send({ error: 'liked 必须是布尔值' });
+    return { ok: true, liked: updateFavoriteFile(tasteFilePath, { name, artist }, liked) };
+  } catch (error) {
+    return reply.code(400).send({ error: error.message });
+  }
 });
 
 // GET /api/plan/today — today's plan
