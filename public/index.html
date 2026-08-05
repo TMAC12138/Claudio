@@ -103,9 +103,10 @@
             <section class="panel side-panel">
               <div class="section-head">
                 <span>Up Next</span>
-                <strong>prefetch 10</strong>
+                <button id="btn-refresh-queue" class="queue-refresh-button" type="button">刷新推荐</button>
               </div>
-              <div class="queue-preview">
+              <small id="queue-refresh-status" class="queue-refresh-status" aria-live="polite"></small>
+              <div class="queue-preview" id="queue-preview">
                 <div class="queue-item"><span class="thumb thumb-rose"></span><div><b>下一首推荐</b><small>由 Claude reason 决定</small></div><em>待解析</em></div>
                 <div class="queue-item"><span class="thumb thumb-green"></span><div><b>工作块候选</b><small>偏无歌词和器乐曲</small></div><em>NCM</em></div>
               </div>

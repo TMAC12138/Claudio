@@ -182,6 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-next')?.addEventListener('click', (e) => {
     player.skipCurrent(e.currentTarget);
   });
+  document.getElementById('btn-refresh-queue')?.addEventListener('click', (e) => {
+    player.refreshQueue(e.currentTarget);
+  });
   document.getElementById('btn-prev')?.addEventListener('click', () => player.playPrevious());
   document.getElementById('btn-chat-toggle')?.addEventListener('click', () => {
     showView('chat');

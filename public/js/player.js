@@ -4,7 +4,9 @@ let audio = null;
 let currentSong = null;
 let currentMeta = null;
 let loadingNext = false;
+let refreshingQueue = false;
 let queue = [];
+let pendingQueueMeta = null;
 let history = [];
 let lyricLines = [];
 let lyricsAutoScroll = true;
@@ -57,6 +59,7 @@ function setLyricsExpanded(expanded) {
 export function playResult(result) {
   if (result?.play?.length) {
     queue = result.play.slice(1);
+    pendingQueueMeta = result;
     prefetchAudio(result.play);
     playSong(result.play[0], result);
   } else {
@@ -141,10 +144,38 @@ export async function requestNextSong(triggerButton) {
   }
 }
 
+export async function refreshQueue(triggerButton) {
+  if (refreshingQueue) return;
+  refreshingQueue = true;
+  const originalLabel = triggerButton?.textContent || '刷新推荐';
+  setText('queue-refresh-status', '');
+  if (triggerButton) {
+    triggerButton.textContent = '刷新中...';
+    triggerButton.disabled = true;
+  }
+
+  try {
+    const result = await api.refreshQueue();
+    if (!result?.play?.length) throw new Error('没有可播放的推荐歌曲');
+    queue = result.play.slice();
+    pendingQueueMeta = result;
+    updateQueueCount();
+    setText('queue-refresh-status', `已更新 ${queue.length} 首待播歌曲`);
+  } catch (error) {
+    setText('queue-refresh-status', `刷新失败：${error.message}`);
+  } finally {
+    refreshingQueue = false;
+    if (triggerButton) {
+      triggerButton.textContent = originalLabel;
+      triggerButton.disabled = false;
+    }
+  }
+}
+
 function playNextFromQueue(triggerButton) {
   const next = queue.shift();
   if (next) {
-    playSong(next, currentMeta);
+    playSong(next, pendingQueueMeta || currentMeta);
     updateQueueCount();
     return;
   }
@@ -316,6 +347,24 @@ function getActionButtonLabel(button) {
 
 function updateQueueCount() {
   setText('queue-count', `队列 ${queue.length} 首`);
+  renderQueuePreview();
+}
+
+function renderQueuePreview() {
+  const preview = document.getElementById('queue-preview');
+  if (!preview) return;
+  if (!queue.length) {
+    preview.innerHTML = '<div class="queue-empty">等待生成下一批推荐</div>';
+    return;
+  }
+
+  preview.innerHTML = queue.slice(0, 2).map((song, index) => `
+    <div class="queue-item">
+      <span class="thumb ${index === 0 ? 'thumb-rose' : 'thumb-green'}"></span>
+      <div><b>${escapeHtml(song.name || song.song_name || '未知歌曲')}</b><small>${escapeHtml(song.artist || '未知歌手')}</small></div>
+      <em>${index === 0 ? '下一首' : '待播'}</em>
+    </div>
+  `).join('');
 }
 
 function setText(id, text) {

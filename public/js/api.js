@@ -26,6 +26,10 @@ export async function getNext() {
   return fetchJson(`${API_BASE}/api/next`);
 }
 
+export async function refreshQueue() {
+  return fetchJson(`${API_BASE}/api/queue/refresh`, { method: 'POST' });
+}
+
 export async function getLyric(id) {
   return fetchJson(`${API_BASE}/api/lyric/${encodeURIComponent(id)}`);
 }
