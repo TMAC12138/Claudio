@@ -62,3 +62,11 @@ test('atomically persists and removes a favorite in a real file', () => {
   assert.equal(updateFavoriteFile(file, { name: '晴天', artist: '周杰伦' }, false), false);
   assert.equal(readFileSync(file, 'utf8').includes('原始内容'), true);
 });
+
+test('removes the controlled section when its final favorite is removed', () => {
+  const original = '# taste\n原始内容\n';
+  const song = { name: '唯一收藏', artist: '测试歌手' };
+  const added = setFavorite(original, song, true);
+
+  assert.equal(setFavorite(added, song, false), original);
+});
