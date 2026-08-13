@@ -69,7 +69,7 @@ start_ncm() {
   echo "Starting NCM Enhanced on port $NCM_PORT..."
   (
     cd "$NCM_DIR"
-    nohup npm start >"$log_file" 2>&1 &
+    nohup bash -c 'npm start 2>&1 | node "$1"' _ "$ROOT_DIR/scripts/redact-ncm-log.js" >"$log_file" 2>&1 &
     echo $! >"$pid_file"
   )
 

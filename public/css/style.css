@@ -415,6 +415,59 @@ input:focus-visible,
   overflow-wrap: anywhere;
 }
 
+.song-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.song-title-row .song-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.favorite-button {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(240, 71, 105, 0.22);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--rose);
+  font-size: 24px;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.favorite-button[aria-pressed="true"] {
+  background: rgba(240, 71, 105, 0.12);
+  border-color: rgba(240, 71, 105, 0.36);
+}
+
+.favorite-button:disabled,
+.queue-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.interaction-status,
+.queue-refresh-status {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.interaction-status {
+  margin-top: 6px;
+}
+
+.interaction-status:empty,
+.queue-refresh-status:empty {
+  display: none;
+}
+
 .song-meta {
   margin-top: 12px;
   display: flex;
@@ -699,6 +752,33 @@ input:focus-visible,
   gap: 10px;
   min-height: 0;
   overflow: auto;
+}
+
+.queue-refresh-button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(240, 71, 105, 0.22);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--rose);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.queue-refresh-status {
+  margin: -8px 0 10px;
+}
+
+.queue-empty {
+  padding: 12px;
+  border: 1px dashed rgba(20, 20, 22, 0.14);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .queue-item {
@@ -1191,6 +1271,20 @@ button.dock-card {
     line-height: 1.06;
   }
 
+  .song-title-row {
+    gap: 8px;
+  }
+
+  .favorite-button {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .side-panel .section-head {
+    flex-wrap: wrap;
+  }
+
   .song-meta {
     font-size: 13px;
     gap: 7px;
@@ -1256,4 +1350,60 @@ button.dock-card {
   .nav-btn em {
     font-size: 10px;
   }
+}
+
+.modal-shell {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 90vw;
+  width: 500px;
+}
+
+.modal-shell::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--line, #e0e0e0);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--fg-main, #333);
+}
+
+.modal-card textarea {
+  width: 100%;
+  border: 1px solid var(--line, #ccc);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  box-sizing: border-box;
+  background: var(--bg-input, #fafafa);
+  color: var(--fg-main, #222);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.lyrics-content p span.tlyric {
+  display: block;
+  font-size: 0.85em;
+  opacity: 0.75;
+  margin-top: 2px;
 }

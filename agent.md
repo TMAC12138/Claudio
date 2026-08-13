@@ -35,7 +35,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台，默认监听 `127.0.0.1:30
 - `lib/ncm.js`：搜索网易云歌曲、解析歌词和可播放 URL，并统一歌曲对象结构。
 - `lib/db.js`：初始化和读写 SQLite，表包括 `plays`、`messages`、`plan`、`prefs`。
 - `lib/scheduler.js`：早/午/晚定时推荐与广播。
-- `lib/tts.js`：可选 Fish Audio 语音合成。
+- `lib/tts.js`：可选 Xiaomi MiMo V2.5 TTS 语音合成。
 - `lib/upnp.js`：可选 UPnP/DLNA 设备发现与投放。
 - `public/js/*`：浏览器端 API、播放器、聊天、视图切换和设置页逻辑。
 
@@ -44,8 +44,11 @@ Claudio 是一个本地运行的私人 AI DJ 电台，默认监听 `127.0.0.1:30
 - `CLAUDE_PATH`
 - `NCM_BASE_URL`
 - `NCM_LEVEL`
-- `FISH_API_KEY`
-- `FISH_VOICE_ID`
+- `MIMO_API_KEY`
+- `MIMO_BASE_URL`
+- `MIMO_TTS_MODEL`
+- `MIMO_TTS_VOICE`
+- `MIMO_TTS_STYLE`
 - `WEATHER_API_KEY`
 - `WEATHER_CITY`
 - `PORT`
@@ -74,7 +77,7 @@ Claudio 是一个本地运行的私人 AI DJ 电台，默认监听 `127.0.0.1:30
 
 - 当前目录已有 `.claude/settings.local.json`，其中主要是本地工具权限配置，不要把它当作业务配置。
 - `.claudio-run/logs/` 里有最近运行日志；日志显示前端资源、天气、歌词、NCM 搜索和 `/api/next` 曾有成功请求。
-- 最近日志里出现过 `TTS error`，说明 Fish Audio 语音链路可能未配置或暂不可用；这不等于主播放链路失败。
+- 最近日志里出现过 `TTS error`，说明 MiMo TTS 语音链路可能未配置或暂不可用；这不等于主播放链路失败。
 - 生成本文件时，`git status --short --branch` 显示工作区已有多处修改和一个未跟踪界面截图文件；后续改动前必须重新确认。
 
 ## 常用验证

@@ -43,7 +43,11 @@
             </div>
 
             <div class="track-panel">
-              <h2 class="song-title" id="song-title">等待播放...</h2>
+              <div class="song-title-row">
+                <h2 class="song-title" id="song-title">等待播放...</h2>
+                <button id="btn-favorite" class="favorite-button" type="button" aria-label="喜欢这首歌" aria-pressed="false" disabled>♡</button>
+              </div>
+              <small id="favorite-status" class="interaction-status" aria-live="polite"></small>
               <div class="song-meta">
                 <span id="song-artist">你的私人 AI DJ</span>
                 <span id="song-album">Claudio 会根据此刻状态推荐下一首</span>
@@ -103,9 +107,10 @@
             <section class="panel side-panel">
               <div class="section-head">
                 <span>Up Next</span>
-                <strong>prefetch 10</strong>
+                <button id="btn-refresh-queue" class="queue-refresh-button" type="button">刷新推荐</button>
               </div>
-              <div class="queue-preview">
+              <small id="queue-refresh-status" class="queue-refresh-status" aria-live="polite"></small>
+              <div class="queue-preview" id="queue-preview">
                 <div class="queue-item"><span class="thumb thumb-rose"></span><div><b>下一首推荐</b><small>由 Claude reason 决定</small></div><em>待解析</em></div>
                 <div class="queue-item"><span class="thumb thumb-green"></span><div><b>工作块候选</b><small>偏无歌词和器乐曲</small></div><em>NCM</em></div>
               </div>
@@ -239,6 +244,18 @@
       <button class="nav-btn" data-view="profile" aria-label="品味"><span>◌</span><em>品味</em></button>
       <button class="nav-btn" data-view="settings" aria-label="设置"><span>⌘</span><em>设置</em></button>
     </nav>
+
+    <!-- Modal for Edit Profile -->
+    <dialog id="edit-modal" class="modal-shell">
+      <div class="modal-card">
+        <h3 id="modal-title">编辑</h3>
+        <textarea id="modal-textarea" rows="12" placeholder="内容..."></textarea>
+        <div class="modal-actions">
+          <button id="btn-modal-cancel" type="button" class="mini-button">取消</button>
+          <button id="btn-modal-save" type="button" class="btn-send">保存修改</button>
+        </div>
+      </div>
+    </dialog>
   </div>
 
   <script type="module" src="/js/app.js?v=20260612-1"></script>

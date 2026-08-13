@@ -1,72 +1,97 @@
 const API_BASE = '';
 let ws = null;
 
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function chat(message) {
-  const res = await fetch(`${API_BASE}/api/chat`, {
+  return fetchJson(`${API_BASE}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
   });
-  return res.json();
 }
 
 export async function getNow() {
-  const res = await fetch(`${API_BASE}/api/now`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/now`);
 }
 
 export async function getNext() {
-  const res = await fetch(`${API_BASE}/api/next`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/next`);
+}
+
+export async function refreshQueue() {
+  return fetchJson(`${API_BASE}/api/queue/refresh`, { method: 'POST' });
 }
 
 export async function getLyric(id) {
-  const res = await fetch(`${API_BASE}/api/lyric/${encodeURIComponent(id)}`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/lyric/${encodeURIComponent(id)}`);
 }
 
 export async function skipCurrent() {
-  const res = await fetch(`${API_BASE}/api/play/skip-current`, { method: 'POST' });
-  return res.json();
+  return fetchJson(`${API_BASE}/api/play/skip-current`, { method: 'POST' });
 }
 
 export async function getTaste() {
-  const res = await fetch(`${API_BASE}/api/taste`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/taste`);
+}
+
+export async function getFavorite(song) {
+  const query = new URLSearchParams({
+    name: song.name || song.song_name || '',
+    artist: song.artist || '',
+  });
+  return fetchJson(`${API_BASE}/api/taste/favorite?${query}`);
+}
+
+export async function setFavorite(song, liked) {
+  return fetchJson(`${API_BASE}/api/taste/favorite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: song.name || song.song_name,
+      artist: song.artist,
+      liked,
+    }),
+  });
 }
 
 export async function getScheduler() {
-  const res = await fetch(`${API_BASE}/api/scheduler`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/scheduler`);
 }
 
 export async function getDevices() {
-  const res = await fetch(`${API_BASE}/api/devices`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/devices`);
 }
 
 export async function getPrefs() {
-  const res = await fetch(`${API_BASE}/api/prefs`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/prefs`);
 }
 
 export async function setPref(key, value) {
-  const res = await fetch(`${API_BASE}/api/prefs`, {
+  return fetchJson(`${API_BASE}/api/prefs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key, value }),
   });
-  return res.json();
 }
 
 export async function getWeather() {
-  const res = await fetch(`${API_BASE}/api/weather`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/weather`);
 }
 
 export async function getStats() {
-  const res = await fetch(`${API_BASE}/api/stats`);
-  return res.json();
+  return fetchJson(`${API_BASE}/api/stats`);
+}
+
+export async function getTodayPlan() {
+  return fetchJson(`${API_BASE}/api/plan/today`);
 }
 
 export function connectWS(onMessage) {

@@ -1,11 +1,18 @@
+import * as api from './api.js?v=20260612-1';
+
 let audio = null;
 let currentSong = null;
 let currentMeta = null;
 let loadingNext = false;
+let refreshingQueue = false;
 let queue = [];
+let pendingQueueMeta = null;
 let history = [];
 let lyricLines = [];
 let lyricsAutoScroll = true;
+let favoriteLiked = false;
+let favoriteBusy = false;
+let favoriteRequestToken = 0;
 
 export function init(audioElement) {
   audio = audioElement;
@@ -55,6 +62,7 @@ function setLyricsExpanded(expanded) {
 export function playResult(result) {
   if (result?.play?.length) {
     queue = result.play.slice(1);
+    pendingQueueMeta = result;
     prefetchAudio(result.play);
     playSong(result.play[0], result);
   } else {
@@ -83,6 +91,7 @@ export function playSong(song, meta = currentMeta) {
   renderSong(song);
   updateRecommendationText(currentMeta);
   loadLyrics(song.id || song.song_id);
+  syncFavoriteState(song);
 }
 
 export function togglePlay() {
@@ -111,7 +120,6 @@ export function playPrevious() {
 
 export async function skipCurrent(triggerButton) {
   try {
-    const api = await import('./api.js?v=20260612-1');
     await api.skipCurrent();
   } catch {}
   playNextFromQueue(triggerButton);
@@ -132,7 +140,6 @@ export async function requestNextSong(triggerButton) {
   setLoadingState(true, triggerButton);
 
   try {
-    const api = await import('./api.js?v=20260612-1');
     const result = await api.getNext();
     playResult(result);
   } finally {
@@ -141,10 +148,103 @@ export async function requestNextSong(triggerButton) {
   }
 }
 
+export async function refreshQueue(triggerButton) {
+  if (refreshingQueue) return;
+  refreshingQueue = true;
+  const originalLabel = triggerButton?.textContent || '刷新推荐';
+  setText('queue-refresh-status', '');
+  if (triggerButton) {
+    triggerButton.textContent = '刷新中...';
+    triggerButton.disabled = true;
+  }
+
+  try {
+    const result = await api.refreshQueue();
+    if (!result?.play?.length) throw new Error('没有可播放的推荐歌曲');
+    queue = result.play.slice();
+    pendingQueueMeta = result;
+    updateQueueCount();
+    setText('queue-refresh-status', `已更新 ${queue.length} 首待播歌曲`);
+  } catch (error) {
+    setText('queue-refresh-status', `刷新失败：${error.message}`);
+  } finally {
+    refreshingQueue = false;
+    if (triggerButton) {
+      triggerButton.textContent = originalLabel;
+      triggerButton.disabled = false;
+    }
+  }
+}
+
+export async function toggleFavorite() {
+  if (!currentSong || favoriteBusy) return;
+  const song = currentSong;
+  const key = favoriteSongKey(song);
+  const previous = favoriteLiked;
+  const token = ++favoriteRequestToken;
+  favoriteBusy = true;
+  setText('favorite-status', '');
+  renderFavoriteButton();
+
+  try {
+    const result = await api.setFavorite(song, !previous);
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    favoriteLiked = Boolean(result.liked);
+    setText('favorite-status', favoriteLiked ? '已加入我的音乐品味' : '已从我的音乐品味移除');
+  } catch (error) {
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    favoriteLiked = previous;
+    setText('favorite-status', `更新失败：${error.message}`);
+  } finally {
+    if (token === favoriteRequestToken && key === favoriteSongKey(currentSong)) {
+      favoriteBusy = false;
+      renderFavoriteButton();
+    }
+  }
+}
+
+async function syncFavoriteState(song) {
+  const key = favoriteSongKey(song);
+  const token = ++favoriteRequestToken;
+  favoriteLiked = false;
+  favoriteBusy = true;
+  setText('favorite-status', '');
+  renderFavoriteButton();
+
+  try {
+    const result = await api.getFavorite(song);
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    favoriteLiked = Boolean(result.liked);
+  } catch (error) {
+    if (token !== favoriteRequestToken || key !== favoriteSongKey(currentSong)) return;
+    setText('favorite-status', `状态读取失败：${error.message}`);
+  } finally {
+    if (token === favoriteRequestToken && key === favoriteSongKey(currentSong)) {
+      favoriteBusy = false;
+      renderFavoriteButton();
+    }
+  }
+}
+
+function favoriteSongKey(song) {
+  if (!song) return '';
+  return `${song.name || song.song_name || ''}\u0000${song.artist || ''}`;
+}
+
+function renderFavoriteButton() {
+  const button = document.getElementById('btn-favorite');
+  if (!button) return;
+  button.textContent = favoriteLiked ? '♥' : '♡';
+  button.setAttribute('aria-pressed', String(favoriteLiked));
+  button.setAttribute('aria-label', favoriteLiked ? '取消喜欢这首歌' : '喜欢这首歌');
+  button.title = favoriteLiked ? '取消喜欢' : '添加到我的音乐品味';
+  button.disabled = !currentSong || favoriteBusy;
+}
+
 function playNextFromQueue(triggerButton) {
   const next = queue.shift();
   if (next) {
-    playSong(next, currentMeta);
+    playSong(next, pendingQueueMeta || currentMeta);
     updateQueueCount();
     return;
   }
@@ -205,15 +305,14 @@ async function loadLyrics(songId) {
 
   box.textContent = '正在加载歌词...';
   try {
-    const api = await import('./api.js?v=20260612-1');
     const data = await api.getLyric(songId);
-    lyricLines = parseLrc(data.lrc || data.tlyric || '');
+    lyricLines = parseLrc(data.lrc || '', data.tlyric || '');
     if (!lyricLines.length) {
       box.textContent = '这首歌暂时没有歌词信息。';
       return;
     }
     box.innerHTML = lyricLines.map((line, index) =>
-      `<p data-index="${index}">${escapeHtml(line.text)}</p>`
+      `<p data-index="${index}">${escapeHtml(line.text)}${line.translation ? `<span class="tlyric">${escapeHtml(line.translation)}</span>` : ''}</p>`
     ).join('');
     setLyricsExpanded(true);
   } catch {
@@ -221,7 +320,22 @@ async function loadLyrics(songId) {
   }
 }
 
-function parseLrc(lrc) {
+function parseLrc(lrc, tlyric) {
+  const transMap = new Map();
+  if (tlyric) {
+    tlyric.split('\n').forEach(line => {
+      const match = line.match(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/);
+      if (match) {
+        const min = Number(match[1]);
+        const sec = Number(match[2]);
+        const frac = Number((match[3] || '0').padEnd(3, '0'));
+        const timeKey = Math.floor((min * 60 + sec + frac / 1000) * 10) / 10;
+        const text = match[4].trim();
+        if (text) transMap.set(timeKey, text);
+      }
+    });
+  }
+
   return lrc.split('\n')
     .map(line => {
       const match = line.match(/\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\](.*)/);
@@ -229,9 +343,11 @@ function parseLrc(lrc) {
       const minutes = Number(match[1]);
       const seconds = Number(match[2]);
       const fraction = Number((match[3] || '0').padEnd(3, '0'));
+      const time = minutes * 60 + seconds + fraction / 1000;
+      const timeKey = Math.floor(time * 10) / 10;
       const text = match[4].trim();
       if (!text) return null;
-      return { time: minutes * 60 + seconds + fraction / 1000, text };
+      return { time, text, translation: transMap.get(timeKey) || '' };
     })
     .filter(Boolean);
 }
@@ -300,6 +416,24 @@ function getActionButtonLabel(button) {
 
 function updateQueueCount() {
   setText('queue-count', `队列 ${queue.length} 首`);
+  renderQueuePreview();
+}
+
+function renderQueuePreview() {
+  const preview = document.getElementById('queue-preview');
+  if (!preview) return;
+  if (!queue.length) {
+    preview.innerHTML = '<div class="queue-empty">等待生成下一批推荐</div>';
+    return;
+  }
+
+  preview.innerHTML = queue.slice(0, 2).map((song, index) => `
+    <div class="queue-item">
+      <span class="thumb ${index === 0 ? 'thumb-rose' : 'thumb-green'}"></span>
+      <div><b>${escapeHtml(song.name || song.song_name || '未知歌曲')}</b><small>${escapeHtml(song.artist || '未知歌手')}</small></div>
+      <em>${index === 0 ? '下一首' : '待播'}</em>
+    </div>
+  `).join('');
 }
 
 function setText(id, text) {
