@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attachPlayableSongs } from '../lib/recommendation.js';
+import * as recommendation from '../lib/recommendation.js';
+
+const { attachPlayableSongs } = recommendation;
 
 test('resolves a refreshed queue without recording an unplayed song', async () => {
   const recorded = [];
@@ -43,6 +45,45 @@ test('returns an empty playable list when music resolution fails', async () => {
   await attachPlayableSongs(result, 'next', dependencies);
 
   assert.deepEqual(result.play, []);
-  assert.equal(warnings[0][0], 'Music URL resolve error:');
-  assert.equal(warnings[0][1], 'NCM unavailable');
+  assert.deepEqual(warnings[0][0], {
+    event: 'music_url_resolve_failed',
+    errorCode: 'NCM_RESOLVE_FAILED',
+    source: 'next',
+    errorMessage: 'NCM unavailable',
+  });
+  assert.equal(warnings[0][1], 'Music URL resolution failed');
+});
+
+test('rethrows a resolver error when the caller needs to map it to an HTTP response', async () => {
+  const rateLimitError = Object.assign(new Error('NCM API error: 405'), {
+    code: 'NCM_RATE_LIMITED',
+    httpStatus: 429,
+  });
+  const result = { play: [{ name: '无法解析' }] };
+  const dependencies = {
+    ncm: { resolvePlayableSongs: async () => { throw rateLimitError; } },
+    db: { recordPlay() {} },
+    logger: { warn() {} },
+  };
+
+  await assert.rejects(
+    () => attachPlayableSongs(result, 'queue-refresh', dependencies, {
+      record: false,
+      throwOnError: true,
+    }),
+    error => error === rateLimitError,
+  );
+  assert.deepEqual(result.play, []);
+});
+
+test('maps an NCM rate limit to a clear HTTP 429 response', () => {
+  const response = recommendation.getQueueRefreshErrorResponse?.({
+    code: 'NCM_RATE_LIMITED',
+    httpStatus: 429,
+  });
+
+  assert.deepEqual(response, {
+    status: 429,
+    body: { error: '网易云请求过于频繁，请稍后再试' },
+  });
 });

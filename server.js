@@ -16,7 +16,7 @@ import * as tts from './lib/tts.js';
 import * as upnp from './lib/upnp.js';
 import * as scheduler from './lib/scheduler.js';
 import * as weather from './lib/weather.js';
-import { attachPlayableSongs } from './lib/recommendation.js';
+import { attachPlayableSongs, getQueueRefreshErrorResponse } from './lib/recommendation.js';
 import { readFavoriteFile, updateFavoriteFile } from './lib/taste.js';
 
 dotenv.config();
@@ -205,7 +205,15 @@ app.get('/api/next', async () => {
 app.post('/api/queue/refresh', async (req, reply) => {
   const prompt = await context.assemble({ input: '重新推荐下一批待播歌曲，不要改变当前歌曲', db });
   const result = await claude.ask(prompt);
-  await attachPlayableSongs(result, 'queue-refresh', { ncm, db, logger: app.log }, { record: false });
+  try {
+    await attachPlayableSongs(result, 'queue-refresh', { ncm, db, logger: app.log }, {
+      record: false,
+      throwOnError: true,
+    });
+  } catch (error) {
+    const response = getQueueRefreshErrorResponse(error);
+    return reply.code(response.status).send(response.body);
+  }
   if (!result.play.length) return reply.code(502).send({ error: '没有可播放的推荐歌曲' });
   return result;
 });
